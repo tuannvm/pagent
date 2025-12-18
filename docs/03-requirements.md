@@ -40,6 +40,11 @@ As a Product Manager, I need an AI-powered workflow system that can:
 
 ### FR-3: Specialist Agent Capabilities
 
+**Common Configuration:**
+- Output directory: configurable, defaults to `outputs/`
+- Output filenames: configurable per agent, with defaults shown below
+- Filename pattern supports timestamp: `{name}-{timestamp}.md`
+
 #### FR-3.1: Design Lead Agent
 - Input: PRD, existing design system docs
 - Output: `design-spec.md` containing:
@@ -89,9 +94,18 @@ As a Product Manager, I need an AI-powered workflow system that can:
 
 ### FR-5: Step-Into Capability
 - **FR-5.1**: PM can pause any running agent
+  - Implementation: Agent checks pause flag before each tool call via hook
+  - Paused state persists agent context to allow resumption
+  - Agent completes current tool call before pausing (no mid-execution interrupts)
 - **FR-5.2**: PM can inject messages into agent session
+  - Message appended to agent's conversation history
+  - Agent receives injected message on next turn
 - **FR-5.3**: PM can resume agent with new instructions
+  - Optional instruction text provided at resume time
+  - Agent continues from paused state with updated context
 - **FR-5.4**: PM can terminate agent session
+  - Graceful termination: complete current operation, then stop
+  - Forced termination: immediate stop, may leave partial outputs
 
 ### FR-6: Approval Gates
 - **FR-6.1**: Configurable approval rules per action type
@@ -103,8 +117,41 @@ As a Product Manager, I need an AI-powered workflow system that can:
 ### FR-7: Session Management
 - **FR-7.1**: Each agent run has a unique session ID
 - **FR-7.2**: Sessions can be resumed after interruption
+  - Conversation history restored from persistence
+  - File state may have changed; agent informed of modifications
 - **FR-7.3**: Session history is persisted
-- **FR-7.4**: Sessions can be forked for experimentation
+  - Stores: conversation messages, tool calls/results, timestamps
+  - Storage: local filesystem (SQLite or JSON) for v1
+- **FR-7.4**: Session replay for debugging
+  - View historical session as read-only timeline
+  - See tool calls and outputs at each step
+
+### FR-8: Error Handling and Recovery
+- **FR-8.1**: Agent failure detection
+  - Detect API errors, rate limits, context overflow
+  - Detect agent stuck in loops or producing invalid output
+- **FR-8.2**: Automatic retry for transient failures
+  - Configurable retry count and backoff strategy
+  - Exponential backoff for rate limits
+- **FR-8.3**: Manual recovery options
+  - PM can restart agent from last checkpoint
+  - PM can restart agent from beginning with modified input
+  - PM can skip failed agent and continue workflow
+- **FR-8.4**: Context overflow handling
+  - Warn PM when agent approaches context limit
+  - Option to summarize history and continue
+  - Option to start fresh session with summary context
+
+### FR-9: Agent Coordination
+- **FR-9.1**: Dependency management
+  - Define agent execution order (e.g., Tech Lead waits for Design Lead)
+  - Automatically pass outputs between dependent agents
+- **FR-9.2**: Conflict detection
+  - Flag contradictory outputs between agents
+  - Present conflicts to PM for resolution
+- **FR-9.3**: Shared context
+  - Agents can read (not write) outputs from completed agents
+  - Common project context available to all agents
 
 ## Non-Functional Requirements
 
@@ -128,6 +175,25 @@ As a Product Manager, I need an AI-powered workflow system that can:
 - **NFR-4.2**: CLI interface for power users
 - **NFR-4.3**: Clear status indicators for agent state
 
+### NFR-5: Cost Management
+- **NFR-5.1**: Track API usage per agent session
+  - Input/output token counts
+  - Estimated cost in USD
+- **NFR-5.2**: Display cumulative cost in dashboard
+  - Per session, per agent type, total
+- **NFR-5.3**: Cost alerts
+  - Warn when session exceeds configurable threshold
+  - Option to auto-pause agent at cost limit
+- **NFR-5.4**: Model selection optimization
+  - Use Haiku for simple file reads and formatting
+  - Use Sonnet for analysis and complex reasoning
+  - Configurable per agent type
+
+### NFR-6: Authentication and Authorization
+- **NFR-6.1**: Dashboard requires authentication (local mode: optional, hosted mode: required)
+- **NFR-6.2**: API key management via environment variables or secure config
+- **NFR-6.3**: Audit log of all approval decisions and interventions
+
 ## User Stories
 
 ### Epic 1: PRD Processing
@@ -149,7 +215,7 @@ As a Product Manager, I need an AI-powered workflow system that can:
 - Acceptance Criteria:
   - Checkbox list of available specialists
   - Can select all or specific ones
-  - Shows estimated time for each
+  - Shows agent dependencies (which agents wait for others)
 
 **US-2.2**: As a PM, I want agents to run in parallel so that the overall process is faster.
 - Acceptance Criteria:
@@ -237,8 +303,8 @@ As a Product Manager, I need an AI-powered workflow system that can:
 - Must comply with Anthropic's Commercial Terms of Service
 
 ### Timeline Constraints
-- MVP within 4 weeks
-- Full feature set within 8 weeks
+- No fixed timeline estimates—scope and complexity should drive delivery
+- Prioritize MVP features (FR-1 through FR-4) before advanced features (FR-5 through FR-9)
 
 ## Out of Scope (v1)
 
@@ -246,6 +312,8 @@ As a Product Manager, I need an AI-powered workflow system that can:
 - Custom agent types beyond the five specialists
 - Integration with external project management tools (Jira, Linear)
 - Mobile application
+- Session forking (creating branches from a session state for experimentation)
+- Agent-to-agent direct messaging (agents communicate via shared outputs only)
 - Voice interface
 - Automated CI/CD pipeline integration
 
@@ -253,9 +321,10 @@ As a Product Manager, I need an AI-powered workflow system that can:
 
 1. **Time to First Output**: < 10 minutes from PRD upload to first specialist output
 2. **Parallel Efficiency**: 5 agents complete in < 2x time of single agent
-3. **Intervention Success**: 95% of step-in actions successfully modify agent behavior
-4. **Approval Latency**: < 30 seconds average for PM to respond to approval request
-5. **Output Quality**: 80% of outputs require no major revisions
+3. **Intervention Success**: Step-in action (pause, inject message, resume) completes without error
+4. **Approval Latency**: Approval requests visible in dashboard within 2 seconds of generation
+5. **Session Persistence**: Sessions resume correctly after server restart (conversation intact, no data loss)
+6. **Cost Visibility**: Actual API cost within 10% of displayed estimate
 
 ## Glossary
 
