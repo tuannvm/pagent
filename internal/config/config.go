@@ -90,207 +90,188 @@ func (c *Config) ApplyEnvOverrides() {
 func Default() *Config {
 	return &Config{
 		OutputDir: "./outputs",
-		Timeout:   300,
+		Timeout:   600, // 10 minutes per agent (complex prompts need time)
 		Agents: map[string]AgentConfig{
-			"design": {
-				Prompt: `You are a Design Lead. Read the PRD at {prd_path} and create a design specification.
+			// ============================================================
+			// SPECIFICATION PHASE - Produces design documents
+			// ============================================================
+			"architect": {
+				Prompt: `You are a Principal Software Architect. Read the PRD at {prd_path} and create a comprehensive architecture document.
 Write your output to {output_path}.
 
-Include:
-- UI/UX requirements
-- User flows (mermaid diagrams)
-- Component specifications
-- Accessibility requirements
-- Design system considerations
+This is THE source of truth for all technical decisions. Include:
 
-Be specific and actionable. Reference existing patterns when possible.`,
-				Output:    "design-spec.md",
+## 1. System Overview
+- High-level architecture diagram (mermaid)
+- Component responsibilities
+- Technology stack decisions with rationale
+
+## 2. API Design
+- RESTful API endpoints (OpenAPI 3.0 format)
+- Request/response schemas
+- Authentication flow
+- Error response format
+
+## 3. Data Models
+- Entity relationship diagram (mermaid)
+- Complete schema definitions with field types
+- Database table designs (PostgreSQL)
+- Indexes and constraints
+
+## 4. Component Design
+- UI/UX requirements and user flows
+- Service layer responsibilities
+- Repository layer patterns
+
+## 5. Infrastructure
+- Deployment architecture
+- Scaling considerations
+- Monitoring requirements
+
+Be specific and actionable. This document drives all implementation.`,
+				Output:    "architecture.md",
 				DependsOn: []string{},
 			},
-			"tech": {
-				Prompt: `You are a Tech Lead. Read the PRD at {prd_path} and any existing design docs in the outputs directory.
-Write your output to {output_path}.
-
-Include:
-- Architecture decisions with rationale
-- API specifications (OpenAPI format if applicable)
-- Data models and database schema
-- Technical constraints and trade-offs
-- Integration points
-- Security considerations
-
-Be specific and actionable. Reference existing code patterns when possible.`,
-				Output:    "technical-requirements.md",
-				DependsOn: []string{"design"},
-			},
 			"qa": {
-				Prompt: `You are a QA Lead. Read the PRD at {prd_path} and existing specs in the outputs directory.
+				Prompt: `You are a QA Lead. Read the PRD at {prd_path} and architecture at outputs/architecture.md.
 Write your output to {output_path}.
 
 Include:
 - Test strategy overview
-- Test cases organized by feature
-- Acceptance criteria
+- Test cases organized by feature (mapped to API endpoints)
+- Acceptance criteria for each user story
 - Edge cases and error scenarios
 - Performance test requirements
-- Regression test considerations
+- Integration test scenarios
 
 Be thorough and cover both happy paths and edge cases.`,
 				Output:    "test-plan.md",
-				DependsOn: []string{"tech"},
+				DependsOn: []string{"architect"},
 			},
 			"security": {
-				Prompt: `You are a Security Reviewer. Read the PRD at {prd_path} and technical requirements in the outputs directory.
+				Prompt: `You are a Security Reviewer. Read the PRD at {prd_path} and architecture at outputs/architecture.md.
 Write your output to {output_path}.
 
 Include:
-- Threat model (STRIDE or similar)
-- Security requirements
-- Authentication/Authorization considerations
-- Data protection requirements
+- Threat model (STRIDE analysis)
+- Security requirements checklist
+- Authentication/Authorization review
+- Data protection requirements (encryption, PII handling)
+- API security (rate limiting, input validation)
 - Risk assessment with severity levels
-- Recommended mitigations
+- Required mitigations (must be addressed by implementer)
 
-Focus on practical, actionable security guidance.`,
+Focus on practical, actionable security guidance that the implementer MUST follow.`,
 				Output:    "security-assessment.md",
-				DependsOn: []string{"tech"},
+				DependsOn: []string{"architect"},
 			},
-			"infra": {
-				Prompt: `You are an Infrastructure Lead. Read the PRD at {prd_path} and technical requirements in the outputs directory.
-Write your output to {output_path}.
 
-Include:
-- Infrastructure requirements
-- Resource sizing estimates
-- Deployment strategy
-- Scaling considerations
-- Monitoring and alerting requirements
-- Disaster recovery considerations
-- Cost estimates if possible
+			// ============================================================
+			// IMPLEMENTATION PHASE - Produces working code
+			// ============================================================
+			"implementer": {
+				Prompt: `You are a Senior Full-Stack Go Developer. Your task is to implement the COMPLETE application.
 
-Be practical and consider both development and production environments.`,
-				Output:    "infrastructure-plan.md",
-				DependsOn: []string{"tech"},
-			},
-			"backend": {
-				Prompt: `You are a Senior Go Developer. Read the PRD at {prd_path} and the technical requirements at outputs/technical-requirements.md.
+Read these inputs carefully:
+- PRD: {prd_path}
+- Architecture: outputs/architecture.md (THIS IS YOUR SOURCE OF TRUTH)
+- Security: outputs/security-assessment.md (MUST address all security requirements)
 
-Your task is to implement the COMPLETE backend API in Go. Create all necessary files in the outputs/code/ directory.
+IMPORTANT: You own ALL code. Create a cohesive, working codebase.
 
-IMPORTANT: Create actual, working Go code files - not documentation.
+Create this structure in outputs/code/:
 
-Create this directory structure:
-outputs/code/
-├── cmd/
-│   └── server/
-│       └── main.go           # Application entry point
-├── internal/
-│   ├── handler/              # HTTP handlers
-│   │   ├── auth.go
-│   │   ├── project.go
-│   │   └── task.go
-│   ├── service/              # Business logic
-│   │   ├── auth.go
-│   │   ├── project.go
-│   │   └── task.go
-│   ├── repository/           # Database operations
-│   │   ├── user.go
-│   │   ├── project.go
-│   │   └── task.go
-│   ├── model/                # Data models
-│   │   └── models.go
-│   ├── middleware/           # HTTP middleware
-│   │   ├── auth.go
-│   │   └── logging.go
-│   └── config/               # Configuration
-│       └── config.go
-├── go.mod
-├── go.sum (empty placeholder)
-├── Makefile
-├── Dockerfile
-└── README.md
-
-Requirements:
-- Use Chi or standard library for HTTP routing
-- Use sqlc or raw SQL for database operations
-- Implement JWT authentication
-- Include proper error handling
-- Add input validation
-- Follow Go best practices and idioms
-
-Write the completion marker to {output_path} when done.`,
-				Output:    "code/.backend-complete",
-				DependsOn: []string{"tech", "security"},
-			},
-			"database": {
-				Prompt: `You are a Database Engineer. Read the PRD at {prd_path} and technical requirements at outputs/technical-requirements.md.
-
-Your task is to create the complete database schema and migrations. Create all files in outputs/code/migrations/.
-
-IMPORTANT: Create actual SQL files - not documentation.
-
-Create this structure:
-outputs/code/migrations/
+## Database Layer
+migrations/
 ├── 000001_create_users.up.sql
 ├── 000001_create_users.down.sql
-├── 000002_create_projects.up.sql
-├── 000002_create_projects.down.sql
-├── 000003_create_tasks.up.sql
-├── 000003_create_tasks.down.sql
-└── README.md
+├── 000002_create_*.up.sql (as needed)
+└── 000002_create_*.down.sql
+internal/db/
+├── db.go                    # Connection pool, transactions
+└── queries.sql              # SQL queries for sqlc
+sqlc.yaml                    # sqlc configuration
 
-Also create:
-outputs/code/sqlc.yaml          # sqlc configuration
-outputs/code/internal/db/
-├── queries.sql                  # SQL queries for sqlc
-└── db.go                        # Database connection helper
+## Application Layer
+cmd/server/main.go           # Entry point, DI setup
+internal/
+├── config/config.go         # Configuration
+├── model/models.go          # Domain models (match architecture.md exactly)
+├── repository/              # Database operations (one per entity)
+├── service/                 # Business logic
+├── handler/                 # HTTP handlers
+└── middleware/              # Auth, logging, error handling
+
+## Build & Deploy
+go.mod, go.sum
+Makefile
+Dockerfile
+README.md
 
 Requirements:
-- PostgreSQL 16 compatible
-- Include indexes for common queries
-- Add foreign key constraints
-- Include created_at/updated_at timestamps
-- Use UUID for primary keys
-- Follow golang-migrate format
+- Follow architecture.md EXACTLY for API endpoints and data models
+- Implement ALL security mitigations from security-assessment.md
+- Use Chi for HTTP routing
+- Use pgx for PostgreSQL
+- JWT authentication with refresh tokens
+- Structured logging with zerolog
+- Input validation with go-playground/validator
+- Proper error handling and HTTP status codes
 
-Write the completion marker to {output_path} when done.`,
-				Output:    "code/.database-complete",
-				DependsOn: []string{"tech"},
+Write completion marker to {output_path} when done.`,
+				Output:    "code/.complete",
+				DependsOn: []string{"architect", "security"},
 			},
-			"tests": {
-				Prompt: `You are a Test Engineer. Read the PRD at {prd_path}, test plan at outputs/test-plan.md, and the implemented code in outputs/code/.
+			"verifier": {
+				Prompt: `You are a Code Reviewer and Test Engineer. Your task is to verify the implementation and write tests.
 
-Your task is to write comprehensive tests. Create test files alongside the code they test.
+Read these inputs:
+- PRD: {prd_path}
+- Architecture: outputs/architecture.md
+- Security: outputs/security-assessment.md
+- Test Plan: outputs/test-plan.md
+- Implemented Code: outputs/code/
 
-IMPORTANT: Create actual Go test files - not documentation.
+## Task 1: Verification Report
+Create outputs/verification-report.md with:
 
-Create these test files:
-outputs/code/internal/handler/auth_test.go
-outputs/code/internal/handler/project_test.go
-outputs/code/internal/handler/task_test.go
-outputs/code/internal/service/auth_test.go
-outputs/code/internal/service/project_test.go
-outputs/code/internal/service/task_test.go
-outputs/code/internal/repository/user_test.go
-outputs/code/internal/repository/project_test.go
-outputs/code/internal/repository/task_test.go
+### API Compliance
+- [ ] All endpoints from architecture.md implemented
+- [ ] Request/response schemas match specification
+- [ ] Error responses follow defined format
 
-Also create:
-outputs/code/internal/testutil/
-├── fixtures.go                  # Test fixtures and helpers
-└── mock.go                      # Mock implementations
+### Security Compliance
+- [ ] All mitigations from security-assessment.md addressed
+- [ ] Authentication implemented correctly
+- [ ] Input validation present
+- [ ] No hardcoded secrets
+
+### Code Quality
+- [ ] Code compiles (go build ./...)
+- [ ] No obvious bugs or logic errors
+- [ ] Proper error handling
+- [ ] Follows Go idioms
+
+List any discrepancies found.
+
+## Task 2: Write Tests
+Create test files in outputs/code/:
+internal/handler/*_test.go
+internal/service/*_test.go
+internal/repository/*_test.go
+internal/testutil/
+├── fixtures.go
+└── mocks.go
 
 Requirements:
-- Use standard testing package
-- Use testify for assertions
-- Include table-driven tests
+- Table-driven tests
 - Test happy paths and error cases
-- Include integration test examples
-- Mock external dependencies
+- Mock database for unit tests
+- Use testify for assertions
 
-Write the completion marker to {output_path} when done.`,
-				Output:    "code/.tests-complete",
-				DependsOn: []string{"backend", "database", "qa"},
+Write completion marker to {output_path} when done.`,
+				Output:    "code/.verified",
+				DependsOn: []string{"implementer", "qa"},
 			},
 		},
 	}

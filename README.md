@@ -71,31 +71,25 @@ make install
 ## Quick Start
 
 ```bash
-# Run all specialists on a PRD (documentation only)
-pm-agents run ./prd.md --agents design,tech,qa,security,infra
+# Run all 5 agents (specs + code) in dependency order
+pm-agents run ./prd.md --sequential -v
 
 # Output files will be in ./outputs/
 ls outputs/
-# design-spec.md
-# technical-requirements.md
-# test-plan.md
-# security-assessment.md
-# infrastructure-plan.md
-```
-
-### Full PRD-to-Code Pipeline
-
-```bash
-# Run all 8 agents (docs + code generation)
-pm-agents run ./prd.md --sequential -v
-
-# Generated outputs:
-ls outputs/
-# Docs: design-spec.md, technical-requirements.md, etc.
-# Code: code/cmd/server/main.go, code/internal/*, code/migrations/*
+# architecture.md          <- System design (architect)
+# test-plan.md             <- Test cases (qa)
+# security-assessment.md   <- Security review (security)
+# verification-report.md   <- Compliance check (verifier)
+# code/                    <- Complete codebase (implementer)
 
 # Verify generated code compiles
 cd outputs/code && go mod tidy && go build ./...
+```
+
+### Specs Only (No Code)
+
+```bash
+pm-agents run ./prd.md --agents architect,qa,security --sequential
 ```
 
 ## Usage
@@ -173,23 +167,22 @@ pm-agents version
 
 ## Specialist Agents
 
-### Spec Agents (Documentation)
+### Specification Phase
 
-| Agent | Output File | Dependencies |
-|-------|-------------|--------------|
-| design | `design-spec.md` | - |
-| tech | `technical-requirements.md` | design |
-| qa | `test-plan.md` | tech |
-| security | `security-assessment.md` | tech |
-| infra | `infrastructure-plan.md` | tech |
+| Agent | Output | Dependencies | Role |
+|-------|--------|--------------|------|
+| architect | `architecture.md` | - | System design, API, data models |
+| qa | `test-plan.md` | architect | Test strategy and cases |
+| security | `security-assessment.md` | architect | Threat model, mitigations |
 
-### Developer Agents (Code Generation)
+### Implementation Phase
 
-| Agent | Output | Dependencies |
-|-------|--------|--------------|
-| backend | `code/` (Go API) | tech, security |
-| database | `code/migrations/` (SQL) | tech |
-| tests | `code/*_test.go` | backend, database, qa |
+| Agent | Output | Dependencies | Role |
+|-------|--------|--------------|------|
+| implementer | `code/*` | architect, security | ALL code (API, DB, migrations) |
+| verifier | `code/*_test.go` | implementer, qa | Tests + verification report |
+
+**Key Design:** Single `implementer` owns all code to prevent conflicts. Single `verifier` validates against specs.
 
 ## Configuration
 

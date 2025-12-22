@@ -130,16 +130,21 @@ Claude Code starts in `"running"` state while loading. The CLI must:
 ### 3. Configuration (`internal/config/config.go`)
 
 YAML-based configuration with:
-- Default agent prompts (8 agents: 5 spec + 3 developer)
+- Default agent prompts (5 agents with clear boundaries)
 - Dependency ordering
 - Environment variable overrides (`PM_AGENTS_OUTPUT_DIR`, `PM_AGENTS_TIMEOUT`)
 
-**Agent Types:**
+**Agent Structure (Refactored):**
 
-| Category | Agents | Output |
-|----------|--------|--------|
-| Spec Agents | design, tech, qa, security, infra | Markdown docs |
-| Dev Agents | backend, database, tests | Working Go code |
+| Phase | Agents | Output | Key Principle |
+|-------|--------|--------|---------------|
+| Specification | architect, qa, security | Markdown docs | Single architect owns all design |
+| Implementation | implementer, verifier | Working Go code + tests | Single implementer owns all code |
+
+**Why 5 agents instead of 8:**
+- Eliminates overlap between design/tech and backend/database
+- Single source of truth for code (implementer)
+- Clear contracts between agents
 
 ### 4. CLI Commands (`internal/cmd/`)
 
@@ -245,22 +250,19 @@ make release-snapshot
 The following end-to-end workflow was tested successfully:
 
 ```bash
-# Run all 8 agents in sequential mode
+# Run all 5 agents in sequential mode
 pm-agents run ./examples/task-manager-prd.md --sequential -v
 ```
 
 **Outputs Generated:**
 
-| Agent | Output | Size |
-|-------|--------|------|
-| design | `design-spec.md` | 19KB |
-| tech | `technical-requirements.md` | 38KB |
-| qa | `test-plan.md` | 39KB |
-| security | `security-assessment.md` | 38KB |
-| infra | `infrastructure-plan.md` | 37KB |
-| database | `code/migrations/*.sql` | 8 files |
-| backend | `code/internal/**/*.go` | 15+ files |
-| tests | `code/**/*_test.go` | (partial) |
+| Agent | Output | Description |
+|-------|--------|-------------|
+| architect | `architecture.md` | System design, API specs, data models |
+| qa | `test-plan.md` | Test cases, acceptance criteria |
+| security | `security-assessment.md` | Threat model, mitigations |
+| implementer | `code/*` | Complete Go codebase |
+| verifier | `verification-report.md`, `code/*_test.go` | Compliance check, tests |
 
 **Generated Code Structure:**
 ```

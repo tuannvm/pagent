@@ -18,7 +18,7 @@ import (
 
 const (
 	basePort      = 3284
-	healthTimeout = 30 * time.Second
+	healthTimeout = 60 * time.Second // Increased for slow Claude Code startup
 )
 
 // State file paths
@@ -187,8 +187,9 @@ func (m *Manager) spawnAgent(ctx context.Context, name string, port int) (*Runni
 	// Set process group so we can kill all children
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	// Capture stderr for debugging
+	// Capture stdout/stderr for debugging
 	if m.verbose {
+		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
 

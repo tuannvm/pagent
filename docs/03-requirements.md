@@ -131,28 +131,30 @@ pm-agents agents show design
 
 ### FR-3: Specialist Agents
 
-Eight specialists organized into two categories:
+Five specialists with clear boundaries (no overlap):
 
-**Specification Agents** (produce documentation):
-
-| Agent | Input | Output | Waits For |
-|-------|-------|--------|-----------|
-| **design** | PRD | `design-spec.md` | — |
-| **tech** | PRD, design-spec | `technical-requirements.md` | design (optional) |
-| **qa** | PRD, design-spec, TRD | `test-plan.md` | tech (optional) |
-| **security** | PRD, TRD | `security-assessment.md` | tech (optional) |
-| **infra** | PRD, TRD | `infrastructure-plan.md` | tech (optional) |
-
-**Developer Agents** (produce working code):
+**Specification Phase** (produce documentation):
 
 | Agent | Input | Output | Waits For |
 |-------|-------|--------|-----------|
-| **backend** | PRD, TRD, security | `code/` (Go API) | tech, security |
-| **database** | PRD, TRD | `code/migrations/` (SQL) | tech |
-| **tests** | PRD, test-plan, code | `code/*_test.go` | backend, database, qa |
+| **architect** | PRD | `architecture.md` | — |
+| **qa** | PRD, architecture | `test-plan.md` | architect |
+| **security** | PRD, architecture | `security-assessment.md` | architect |
+
+**Implementation Phase** (produce working code):
+
+| Agent | Input | Output | Waits For |
+|-------|-------|--------|-----------|
+| **implementer** | PRD, architecture, security | `code/*` (complete codebase) | architect, security |
+| **verifier** | PRD, all specs, code | `code/*_test.go`, `verification-report.md` | implementer, qa |
+
+**Key Design Principles:**
+1. **Single owner per artifact**: `implementer` owns ALL code, `verifier` owns ALL tests
+2. **No overlap**: Eliminates conflicts between agents
+3. **Clear contracts**: Each agent reads specific inputs, produces specific outputs
 
 **Default mode:** All run in parallel (agents read whatever files exist).
-**Sequential mode:** `--sequential` flag enforces dependency order.
+**Sequential mode:** `--sequential` flag enforces dependency order (recommended).
 
 ### FR-4: Output Management
 
@@ -436,8 +438,8 @@ If v1 proves useful, consider:
 |------|------------|
 | PRD | Product Requirements Document — input specification |
 | AgentAPI | HTTP wrapper around Claude Code (coder/agentapi) |
-| Spec Agent | One of 5 specification agent types (design, tech, qa, security, infra) |
-| Dev Agent | One of 3 developer agent types (backend, database, tests) |
+| Spec Agent | Specification phase agent (architect, qa, security) |
+| Impl Agent | Implementation phase agent (implementer, verifier) |
 | Stable | AgentAPI status indicating agent is idle and can receive messages |
 | Running | AgentAPI status indicating agent is actively processing |
 

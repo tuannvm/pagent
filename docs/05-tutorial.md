@@ -60,19 +60,16 @@ EOF
 pm-agents run ./my-prd.md
 ```
 
-This spawns 8 specialist agents in parallel:
+This spawns 5 specialist agents in dependency order:
 
-**Spec Agents** (documentation):
-- **design** - Creates UI/UX design specification
-- **tech** - Creates technical requirements document
-- **qa** - Creates test plan
-- **security** - Creates security assessment
-- **infra** - Creates infrastructure plan
+**Specification Phase:**
+- **architect** - Creates comprehensive architecture document (API, data models, design)
+- **qa** - Creates test plan and acceptance criteria
+- **security** - Creates threat model and security requirements
 
-**Developer Agents** (code):
-- **backend** - Creates Go API implementation
-- **database** - Creates PostgreSQL migrations
-- **tests** - Creates Go test files
+**Implementation Phase:**
+- **implementer** - Creates complete codebase (API, database, migrations)
+- **verifier** - Validates implementation and writes tests
 
 ### Step 3: Check Progress
 
@@ -141,20 +138,17 @@ cd outputs/code && go mod tidy && go build ./...
 Run specialist agents on a PRD.
 
 ```bash
-# Run all agents in parallel (default)
-pm-agents run ./prd.md
+# Run all 5 agents in dependency order (recommended)
+pm-agents run ./prd.md --sequential
 
 # Run spec agents only (documentation)
-pm-agents run ./prd.md --agents design,tech,qa,security,infra
+pm-agents run ./prd.md --agents architect,qa,security --sequential
 
-# Run developer agents only (code generation)
-pm-agents run ./prd.md --agents backend,database,tests
+# Run implementation agents only (requires specs to exist)
+pm-agents run ./prd.md --agents implementer,verifier --sequential
 
-# Run specific agents only
-pm-agents run ./prd.md --agents design,tech
-
-# Run in dependency order (sequential) - recommended for full workflow
-pm-agents run ./prd.md --sequential
+# Run specific agent
+pm-agents run ./prd.md --agents architect
 
 # Custom output directory
 pm-agents run ./prd.md --output ./docs/specs/
@@ -390,20 +384,19 @@ cat > prd.md << 'EOF'
 EOF
 
 # 3. Run spec agents only
-pm-agents run ./prd.md --agents design,tech,qa,security,infra --sequential -v
+pm-agents run ./prd.md --agents architect,qa,security --sequential -v
 
 # 4. Check outputs
 ls outputs/
-# design-spec.md, technical-requirements.md, test-plan.md,
-# security-assessment.md, infrastructure-plan.md
+# architecture.md, test-plan.md, security-assessment.md
 ```
 
 ### Workflow 2: Full PRD-to-Code Pipeline
 
-Generate docs AND working code from a PRD:
+Generate specs AND working code from a PRD:
 
 ```bash
-# 1. Run all 8 agents in sequential mode (recommended)
+# 1. Run all 5 agents in sequential mode (recommended)
 pm-agents run ./prd.md --sequential -v
 
 # 2. Monitor progress (in another terminal)
@@ -412,8 +405,9 @@ pm-agents status
 # 3. Check generated outputs
 ls outputs/
 # Spec docs:
-#   design-spec.md, technical-requirements.md, test-plan.md,
-#   security-assessment.md, infrastructure-plan.md
+#   architecture.md, test-plan.md, security-assessment.md
+# Verification:
+#   verification-report.md
 # Generated code:
 #   code/
 
@@ -432,14 +426,14 @@ find . -type f -name "*.go" | head -20
 Run spec agents first, review, then generate code:
 
 ```bash
-# Step 1: Generate specs
-pm-agents run ./prd.md --agents design,tech --sequential -v
+# Step 1: Generate architecture
+pm-agents run ./prd.md --agents architect --sequential -v
 
 # Step 2: Review and provide feedback
-pm-agents message tech "Use Chi router instead of standard library"
+pm-agents message architect "Use Chi router instead of standard library"
 
-# Step 3: Generate code after specs are finalized
-pm-agents run ./prd.md --agents database,backend,tests --sequential -v
+# Step 3: Run remaining agents after architecture is finalized
+pm-agents run ./prd.md --agents qa,security,implementer,verifier --sequential -v
 
 # Step 4: Verify
 cd outputs/code && go build ./...
