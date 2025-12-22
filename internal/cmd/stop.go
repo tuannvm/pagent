@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/tuannvm/pm-agent-workflow/internal/agent"
@@ -74,22 +75,30 @@ func stopAgentByPort(name string, port int) {
 	// This is a best-effort approach since we don't have direct process control
 	logVerbose("Attempting to stop agent %s on port %d", name, port)
 
-	// First find the PID
+	// First find the PID(s) - lsof may return multiple PIDs, one per line
 	out, err := exec.Command("lsof", "-ti", fmt.Sprintf(":%d", port)).Output()
 	if err != nil {
 		logVerbose("Could not find process for agent %s on port %d: %v", name, port, err)
 		return
 	}
 
-	pid := string(out)
-	if pid == "" {
+	pidStr := strings.TrimSpace(string(out))
+	if pidStr == "" {
 		logVerbose("No process found on port %d", port)
 		return
 	}
 
-	// Kill the process
-	killCmd := exec.Command("kill", "-TERM", pid[:len(pid)-1]) // Remove trailing newline
-	if err := killCmd.Run(); err != nil {
-		logVerbose("Could not kill process %s: %v", pid, err)
+	// Split by newline in case there are multiple PIDs
+	pids := strings.Split(pidStr, "\n")
+	for _, pid := range pids {
+		pid = strings.TrimSpace(pid)
+		if pid == "" {
+			continue
+		}
+		logVerbose("Killing process %s", pid)
+		killCmd := exec.Command("kill", "-TERM", pid)
+		if err := killCmd.Run(); err != nil {
+			logVerbose("Could not kill process %s: %v", pid, err)
+		}
 	}
 }

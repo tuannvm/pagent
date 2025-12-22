@@ -111,7 +111,7 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 		_ = m.saveState() // Update state after stopping
 	}()
 
-	// Wait for agent to be healthy
+	// Wait for agent API to be healthy
 	if err := agent.Client.WaitForHealthy(healthTimeout); err != nil {
 		return Result{
 			Agent:    name,
@@ -121,7 +121,21 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 	}
 
 	if m.verbose {
-		fmt.Printf("[DEBUG] Agent %s is healthy, sending task\n", name)
+		fmt.Printf("[DEBUG] Agent %s API is healthy, waiting for stable state\n", name)
+	}
+
+	// Wait for agent to be ready for input (stable state)
+	// Claude Code starts in "running" state while loading
+	if err := agent.Client.WaitForStable(healthTimeout); err != nil {
+		return Result{
+			Agent:    name,
+			Error:    fmt.Errorf("agent failed to become stable: %w", err),
+			Duration: time.Since(start),
+		}
+	}
+
+	if m.verbose {
+		fmt.Printf("[DEBUG] Agent %s is stable, sending task\n", name)
 	}
 
 	// Send the task prompt

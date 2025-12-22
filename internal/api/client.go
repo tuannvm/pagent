@@ -28,9 +28,15 @@ type Message struct {
 
 // ConversationMessage represents a message in the conversation history
 type ConversationMessage struct {
-	Role      string `json:"role"`
-	Content   string `json:"content"`
-	Timestamp string `json:"timestamp,omitempty"`
+	ID      int    `json:"id"`
+	Role    string `json:"role"`
+	Content string `json:"content"`
+	Time    string `json:"time,omitempty"`
+}
+
+// MessagesResponse represents the response from GET /messages
+type MessagesResponse struct {
+	Messages []ConversationMessage `json:"messages"`
 }
 
 // NewClient creates a new AgentAPI client
@@ -107,12 +113,12 @@ func (c *Client) GetMessages() ([]ConversationMessage, error) {
 		return nil, fmt.Errorf("messages request failed: %s", string(body))
 	}
 
-	var messages []ConversationMessage
-	if err := json.NewDecoder(resp.Body).Decode(&messages); err != nil {
+	var response MessagesResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, fmt.Errorf("failed to decode messages: %w", err)
 	}
 
-	return messages, nil
+	return response.Messages, nil
 }
 
 // WaitForStable waits until the agent is in stable state
