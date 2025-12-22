@@ -1,4 +1,4 @@
-# Requirements: PM Agent Workflow CLI
+# Requirements: pagent - PM Agent Workflow CLI
 
 ## Problem Statement
 
@@ -18,7 +18,7 @@ A thin CLI orchestrator built on top of AgentAPI:
 
 ```
 ┌─────────────────────────────────────────────────┐
-│           pm-agents (CLI orchestrator)           │
+│           pagent (CLI orchestrator)           │
 │  - Parse PRD, spawn agents, route tasks          │
 │  - ~500-800 lines of code total                  │
 └─────────────────────┬───────────────────────────┘
@@ -63,48 +63,48 @@ A thin CLI orchestrator built on top of AgentAPI:
 
 ```bash
 # Run all specialists on a PRD
-pm-agents run ./prd.md
+pagent run ./prd.md
 
 # Run specific specialists only
-pm-agents run ./prd.md --agents design,tech
+pagent run ./prd.md --agents design,tech
 
 # Run with custom output directory
-pm-agents run ./prd.md --output ./docs/
+pagent run ./prd.md --output ./docs/
 
 # Run with dependency ordering (tech waits for design)
-pm-agents run ./prd.md --sequential
+pagent run ./prd.md --sequential
 ```
 
 ### Agent Interaction
 
 ```bash
 # Check status of running agents
-pm-agents status
+pagent status
 
 # View live output from an agent
-pm-agents logs tech --follow
+pagent logs tech --follow
 
 # Send a message to a specific agent (when idle)
-pm-agents message design "Focus more on mobile UX"
+pagent message design "Focus more on mobile UX"
 
 # Stop a specific agent
-pm-agents stop tech
+pagent stop tech
 
 # Stop all agents
-pm-agents stop --all
+pagent stop --all
 ```
 
 ### Configuration
 
 ```bash
 # Initialize config in current directory
-pm-agents init
+pagent init
 
 # List available agent types
-pm-agents agents list
+pagent agents list
 
 # Show agent prompt template
-pm-agents agents show design
+pagent agents show design
 ```
 
 ## Functional Requirements
@@ -166,7 +166,7 @@ Five specialists, each with a focused prompt:
 
 ### FR-6: Configuration
 
-- **FR-6.1**: Config file at `.pm-agents/config.yaml`
+- **FR-6.1**: Config file at `.pagent/config.yaml`
 - **FR-6.2**: Configurable per agent:
   - System prompt (or path to prompt file)
   - Output filename
@@ -200,7 +200,7 @@ Five specialists, each with a focused prompt:
 ### NFR-2: Usability
 
 - **NFR-2.1**: Zero configuration for basic use
-  - `pm-agents run prd.md` just works
+  - `pagent run prd.md` just works
 - **NFR-2.2**: Clear, actionable error messages
 - **NFR-2.3**: Progress indication during long operations
 - **NFR-2.4**: `--help` for all commands
@@ -224,13 +224,13 @@ Five specialists, each with a focused prompt:
 
 **US-1.1**: As a PM, I want to run all specialists on my PRD with a single command.
 ```bash
-pm-agents run ./prd.md
+pagent run ./prd.md
 # Spawns 5 agents, waits for completion, outputs files
 ```
 
 **US-1.2**: As a PM, I want to see progress while agents work.
 ```bash
-pm-agents run ./prd.md
+pagent run ./prd.md
 # Output:
 # ✓ design: running...
 # ✓ tech: running...
@@ -242,14 +242,14 @@ pm-agents run ./prd.md
 
 **US-1.3**: As a PM, I want to run only specific specialists.
 ```bash
-pm-agents run ./prd.md --agents design,tech
+pagent run ./prd.md --agents design,tech
 ```
 
 ### Epic 2: Agent Interaction
 
 **US-2.1**: As a PM, I want to check if agents are still working.
 ```bash
-pm-agents status
+pagent status
 # Output:
 # design: stable (idle)
 # tech: running
@@ -258,13 +258,13 @@ pm-agents status
 
 **US-2.2**: As a PM, I want to send guidance to an agent that went off track.
 ```bash
-pm-agents message tech "Focus on REST API, not GraphQL"
+pagent message tech "Focus on REST API, not GraphQL"
 # Waits for agent to be idle, sends message, confirms
 ```
 
 **US-2.3**: As a PM, I want to see what an agent has done so far.
 ```bash
-pm-agents logs design
+pagent logs design
 # Shows conversation history
 ```
 
@@ -272,27 +272,27 @@ pm-agents logs design
 
 **US-3.1**: As a PM, I want to customize agent prompts for my domain.
 ```bash
-pm-agents init
-# Creates .pm-agents/config.yaml with defaults
+pagent init
+# Creates .pagent/config.yaml with defaults
 # Edit prompts as needed
 ```
 
 **US-3.2**: As a PM, I want to change output directory.
 ```bash
-pm-agents run ./prd.md --output ./docs/specs/
+pagent run ./prd.md --output ./docs/specs/
 ```
 
 ### Epic 4: Error Recovery
 
 **US-4.1**: As a PM, I want to stop everything if I made a mistake.
 ```bash
-pm-agents stop --all
+pagent stop --all
 # Kills all agents, confirms cleanup
 ```
 
 **US-4.2**: As a PM, I want to know why an agent failed.
 ```bash
-pm-agents run ./prd.md
+pagent run ./prd.md
 # Output:
 # ✗ security: failed (timeout waiting for stable state)
 # ✓ design: completed
@@ -303,7 +303,7 @@ pm-agents run ./prd.md
 ## Configuration File Format
 
 ```yaml
-# .pm-agents/config.yaml
+# .pagent/config.yaml
 
 output_dir: ./outputs
 timeout: 300  # seconds per agent
@@ -446,16 +446,27 @@ If v1 proves useful, consider:
 
 Key endpoints used:
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/status` | GET | Check if agent is `"running"` or `"stable"` |
-| `/messages` | GET | Get conversation history |
-| `/message` | POST | Send message (`type: "user"` or `"raw"`) |
-| `/events` | GET | SSE stream of updates |
+| Endpoint | Method | Response | Purpose |
+|----------|--------|----------|---------|
+| `/status` | GET | `{"agent_type":"claude","status":"running\|stable"}` | Check agent state |
+| `/messages` | GET | `{"messages":[...]}` | Get conversation history |
+| `/message` | POST | `{"ok":true}` | Send message (`type: "user"` or `"raw"`) |
+| `/events` | GET | SSE stream | Real-time `message_update` and `status_change` events |
+| `/upload` | POST | `{"ok":true,"filePath":"..."}` | Upload files |
+
+**Message types:**
+- `"user"` - Logged in conversation, requires agent status to be `"stable"`
+- `"raw"` - Keystrokes sent directly to terminal, not logged
 
 Start AgentAPI:
 ```bash
 agentapi server --port 3284 -- claude
+```
+
+Check status:
+```bash
+curl localhost:3284/status
+# Returns: {"agent_type":"claude","status":"stable"}
 ```
 
 Send message:
@@ -463,4 +474,5 @@ Send message:
 curl -X POST localhost:3284/message \
   -H "Content-Type: application/json" \
   -d '{"content": "Read prd.md and create design spec", "type": "user"}'
+# Returns: {"ok":true}
 ```
