@@ -236,17 +236,18 @@ const pmAgent = new Agent({
 
 For a PM workflow built specifically around Claude:
 
-**Claude Agent SDK is the optimal choice** because:
-1. Native subagent support without implementing tool execution
-2. Same agent loop and tools as Claude Code
-3. Session persistence for step-into capability
-4. Direct Anthropic support and maintenance
-5. Hooks provide flexibility for approval workflows
+**Original Recommendation:** Claude Agent SDK was identified as the optimal choice for its native subagent support and built-in tools.
 
-The trade-off is that you must build your own:
-- Orchestration UI/dashboard
-- Approval workflow endpoints
-- Multi-agent coordination layer
-- Real-time streaming infrastructure
+**Final Decision:** We chose [AgentAPI](https://github.com/coder/agentapi) instead for the v1 implementation because:
 
-This is a reasonable trade-off given the SDK provides the hardest parts (agent runtime, tool execution, context management) out of the box.
+1. **Simpler architecture** - HTTP API calls vs SDK integration
+2. **Process isolation** - Each agent runs as a separate process
+3. **Faster development** - No TypeScript/Node.js dependency for a Go CLI
+4. **Battle-tested** - AgentAPI is actively maintained by Coder with good community adoption
+
+The trade-off is:
+- No native hooks (must poll for status)
+- No session persistence across runs
+- Less fine-grained control over agent behavior
+
+This is acceptable for v1 given the simplicity benefits. The Claude Agent SDK remains an option for v2 if more sophisticated orchestration is needed.

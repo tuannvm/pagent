@@ -201,11 +201,11 @@ agents:
 ## How It Works
 
 1. **Parse PRD** - Reads the PRD file path
-2. **Spawn Agents** - Starts AgentAPI process per specialist (ports 3284+)
-3. **Health Check** - Waits for each agent to be ready
-4. **Send Task** - Sends prompt with PRD path and output path
-5. **Monitor** - Polls status until agents complete
-6. **Cleanup** - Kills AgentAPI processes on completion/interrupt
+2. **Spawn Agents** - Starts AgentAPI process per specialist (`agentapi server --port <port> -- claude`)
+3. **Health Check** - Polls `GET /status` until agent responds (30s timeout)
+4. **Send Task** - `POST /message` with prompt containing PRD path and output path
+5. **Monitor** - Polls `/status` until `running` -> `stable` transition
+6. **Cleanup** - Kills AgentAPI process groups on completion/interrupt
 
 ### Parallel vs Sequential
 
@@ -326,6 +326,18 @@ lsof -i :3284-3290 | awk 'NR>1 {print $2}' | xargs kill
 ## License
 
 MIT
+
+## AgentAPI Reference
+
+This tool uses [AgentAPI](https://github.com/coder/agentapi) endpoints (verified against OpenAPI spec):
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/status` | GET | Returns `{"status": "running"\|"stable"}` |
+| `/message` | POST | Send `{"content": "...", "type": "user"}` |
+| `/messages` | GET | Get conversation history |
+
+Server flags: `--port` (default 3284), `--type`, `--allowed-hosts`, `--initial-prompt`
 
 ## Acknowledgments
 

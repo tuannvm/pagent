@@ -1,6 +1,8 @@
 # Implementation Summary: PM Agent Workflow CLI
 
-> **Note:** This document describes the actual implementation. The earlier research explored Claude Agent SDK and other frameworks, but the final implementation uses a simpler CLI-first approach with AgentAPI for faster iteration and reduced complexity.
+> **Status:** Implemented and verified against [AgentAPI OpenAPI spec](https://github.com/coder/agentapi/blob/main/openapi.json)
+
+This document describes the actual implementation. The earlier research explored Claude Agent SDK and other frameworks, but the final implementation uses a simpler CLI-first approach with AgentAPI for faster iteration and reduced complexity.
 
 ## Architecture
 
@@ -88,6 +90,21 @@ HTTP client for [AgentAPI](https://github.com/coder/agentapi) endpoints:
 | `/status` | GET | Check agent state (`running`/`stable`) |
 | `/message` | POST | Send message to agent |
 | `/messages` | GET | Get conversation history |
+
+**Request/Response formats (verified):**
+
+```go
+// POST /message request body
+type Message struct {
+    Content string `json:"content"` // Required
+    Type    string `json:"type"`    // "user" or "raw"
+}
+
+// GET /status response
+type Status struct {
+    Status string `json:"status"` // "running" or "stable"
+}
+```
 
 ### 3. Configuration (`internal/config/config.go`)
 

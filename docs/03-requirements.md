@@ -444,7 +444,9 @@ If v1 proves useful, consider:
 
 ## Appendix: AgentAPI Reference
 
-Key endpoints used:
+> **Verified against:** [coder/agentapi](https://github.com/coder/agentapi) OpenAPI specification
+
+### Endpoints
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
@@ -452,15 +454,52 @@ Key endpoints used:
 | `/messages` | GET | Get conversation history |
 | `/message` | POST | Send message (`type: "user"` or `"raw"`) |
 | `/events` | GET | SSE stream of updates |
+| `/openapi.json` | GET | OpenAPI specification |
+| `/docs` | GET | Documentation UI |
+| `/chat` | GET | Web chat interface |
 
-Start AgentAPI:
+### Server Command
+
 ```bash
 agentapi server --port 3284 -- claude
 ```
 
-Send message:
+**Available flags:**
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--port` | `-p` | `3284` | Server port |
+| `--type` | `-t` | (auto) | Override agent type |
+| `--allowed-hosts` | `-a` | `localhost` | Permitted hostnames |
+| `--allowed-origins` | `-o` | `localhost:3284,3000,3001` | CORS origins |
+| `--initial-prompt` | `-I` | (none) | Starting prompt |
+
+### POST /message Request
+
 ```bash
 curl -X POST localhost:3284/message \
   -H "Content-Type: application/json" \
   -d '{"content": "Read prd.md and create design spec", "type": "user"}'
 ```
+
+**Request body:**
+```json
+{
+  "content": "string (required) - message text",
+  "type": "string (required) - 'user' or 'raw'"
+}
+```
+
+- `type: "user"` - Message is logged and submitted to agent
+- `type: "raw"` - Message written directly to terminal
+
+### GET /status Response
+
+```json
+{
+  "status": "stable|running",
+  "agent_type": "claude"
+}
+```
+
+- `stable` - Agent is idle, ready for input
+- `running` - Agent is processing a message
