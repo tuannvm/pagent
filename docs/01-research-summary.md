@@ -1,5 +1,7 @@
 # Research Summary: Multi-Agent Orchestration for PM Workflows
 
+> **Implementation Note:** This document captures the initial research phase. After evaluation, we chose a simpler CLI-first approach using [AgentAPI](https://github.com/coder/agentapi) instead of the Claude Agent SDK. See [04-implementation-plan.md](./04-implementation-plan.md) for the actual implementation.
+
 ## Executive Summary
 
 This document captures research conducted in December 2025 on building a Product Manager (PM) agent system that can control multiple specialist sub-agents for product development workflows.
@@ -168,20 +170,24 @@ The Claude Agent SDK is the most direct path to building on Claude Code's capabi
 | Observability | Hook-based | Built-in | VoltOps |
 | Claude-specific | Yes | No | No |
 
-## Recommendation
+## Recommendation (Research Phase)
 
-**Use the Claude Agent SDK directly** for the PM workflow because:
-1. Native subagent support via `Task` tool
-2. Built-in tools already implemented
-3. Session persistence for step-into capability
-4. Hooks for observation and approval gates
-5. Official Anthropic support and maintenance
+The research initially recommended the Claude Agent SDK, but after further evaluation, we chose **AgentAPI** for the v1 implementation because:
 
-Build a thin orchestration layer on top for:
-- Dashboard UI for monitoring agents
-- Approval workflow endpoints
-- Multi-agent coordination
-- Real-time WebSocket streaming
+1. **Simpler integration** - HTTP API vs SDK integration
+2. **Faster iteration** - No need to learn SDK abstractions
+3. **Process isolation** - Each agent runs in its own process
+4. **Proven tool** - AgentAPI is actively maintained by Coder
+
+The Claude Agent SDK remains a viable option for v2 if more sophisticated orchestration is needed.
+
+### Original SDK Recommendation (for reference)
+
+The original recommendation was to use the Claude Agent SDK directly for:
+- Native subagent support via `Task` tool
+- Built-in tools already implemented
+- Session persistence for step-into capability
+- Hooks for observation and approval gates
 
 ```mermaid
 flowchart TB

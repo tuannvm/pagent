@@ -1,287 +1,326 @@
 # PM Agent Workflow
 
-An AI-powered Product Manager workflow system built on the Claude Agent SDK. Orchestrate multiple specialist agents to transform PRDs into actionable deliverables.
+[![Build & Verify](https://github.com/tuannvm/pm-agent-workflow/actions/workflows/build.yml/badge.svg)](https://github.com/tuannvm/pm-agent-workflow/actions/workflows/build.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tuannvm/pm-agent-workflow)](https://goreportcard.com/report/github.com/tuannvm/pm-agent-workflow)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A CLI tool that orchestrates Claude Code specialist agents to transform PRDs into actionable deliverables.
 
 ## Overview
 
-This system enables a Product Manager to:
-- Upload a PRD (Product Requirements Document)
-- Orchestrate specialist agents (Design, Tech, QA, Security, Infra)
-- Monitor agents in real-time via dashboard
-- Intervene ("step into") any agent session
-- Approve/deny sensitive actions before execution
-
-## Architecture
+`pm-agents` spawns specialist agents via [AgentAPI](https://github.com/coder/agentapi) to produce:
+- Design specifications
+- Technical requirements documents
+- Test plans
+- Security assessments
+- Infrastructure plans
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Dashboard (Next.js)                       │
-│   PRD Upload → Agent Monitor → Approvals → Output Review    │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│               Orchestration Server (Hono)                    │
-│   Agent Manager → Approval Manager → Session Manager         │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                Claude Agent SDK Runtime                      │
-│   Design Lead │ Tech Lead │ QA Lead │ Security │ Infra      │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│           pm-agents (CLI orchestrator)           │
+│  - Parse PRD, spawn agents, route tasks          │
+└─────────────────────┬───────────────────────────┘
+                      │ HTTP (localhost)
+        ┌─────────────┼─────────────┐
+        ▼             ▼             ▼
+   AgentAPI:3284  AgentAPI:3285  AgentAPI:3286
+        │             │             │
+        ▼             ▼             ▼
+   Claude Code    Claude Code   Claude Code
+   (Design)       (Tech)        (QA)
+        │             │             │
+        └─────────────┴─────────────┘
+                      │
+               Shared filesystem
+            (prd.md, outputs/*.md)
 ```
 
-## Specialist Agents
+## Prerequisites
 
-| Agent | Input | Output |
-|-------|-------|--------|
-| **Design Lead** | PRD | `design-spec.md` |
-| **Tech Lead** | PRD, Design Spec | `technical-requirements.md` |
-| **QA Lead** | PRD, Design Spec, TRD | `test-plan.md` |
-| **Security Reviewer** | PRD, TRD | `security-assessment.md` |
-| **Infra Lead** | PRD, TRD | `infrastructure-plan.md` |
+- [AgentAPI](https://github.com/coder/agentapi) installed and in PATH
+- [Claude Code](https://claude.ai/claude-code) installed and authenticated
+- Go 1.21+ (for building from source)
 
-## Key Features
+## Installation
 
-### Real-Time Observation
-- Live streaming of agent activity
-- Tool call monitoring with inputs/outputs
-- File access tracking
+### From Releases
 
-### Step-Into Capability
-- Pause any running agent
-- Inject messages/instructions
-- Resume with modified context
+Download the latest release from [GitHub Releases](https://github.com/tuannvm/pm-agent-workflow/releases).
 
-### Approval Gates
-- Configurable approval rules
-- Auto-approve safe patterns
-- Block dangerous operations until reviewed
+### From Source
 
-### Session Persistence
-- Survive server restarts
-- Resume interrupted sessions
-- Fork sessions for experimentation
+```bash
+git clone https://github.com/tuannvm/pm-agent-workflow
+cd pm-agent-workflow
+make build
+```
 
-## Tech Stack
+### Install to PATH
 
-- **Agent Runtime**: Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`)
-- **Backend**: Hono (TypeScript)
-- **Frontend**: Next.js 14 + shadcn/ui
-- **Database**: SQLite
-- **Real-time**: WebSocket
+```bash
+make install
+```
 
 ## Quick Start
 
 ```bash
-# Prerequisites
-# - Node.js 20+
-# - Claude Code installed
-# - ANTHROPIC_API_KEY set
+# Run all specialists on a PRD
+pm-agents run ./prd.md
 
-# Clone and install
-git clone <repo-url>
-cd pm-agent-workflow
-pnpm install
-
-# Start development servers
-pnpm dev
-
-# Open dashboard
-open http://localhost:3000
+# Output files will be in ./outputs/
+ls outputs/
+# design-spec.md
+# technical-requirements.md
+# test-plan.md
+# security-assessment.md
+# infrastructure-plan.md
 ```
 
-## Project Structure
+## Usage
+
+### Run Agents
+
+```bash
+# Run all agents in parallel (default)
+pm-agents run ./prd.md
+
+# Run specific agents only
+pm-agents run ./prd.md --agents design,tech
+
+# Run in dependency order (sequential)
+pm-agents run ./prd.md --sequential
+
+# Custom output directory
+pm-agents run ./prd.md --output ./docs/specs/
+
+# With verbose output
+pm-agents run ./prd.md -v
+```
+
+### Monitor Agents
+
+```bash
+# Check status of running agents
+pm-agents status
+
+# View agent conversation history
+pm-agents logs design
+pm-agents logs tech
+```
+
+### Interact with Agents
+
+```bash
+# Send guidance to an idle agent
+pm-agents message design "Focus more on mobile UX"
+pm-agents message tech "Use REST API, not GraphQL"
+```
+
+### Stop Agents
+
+```bash
+# Stop a specific agent
+pm-agents stop tech
+
+# Stop all agents
+pm-agents stop --all
+```
+
+### Configuration
+
+```bash
+# Initialize config in current directory
+pm-agents init
+
+# This creates .pm-agents/config.yaml with default prompts
+# Edit to customize agent behavior
+```
+
+### Other Commands
+
+```bash
+# List all agent types
+pm-agents agents list
+
+# Show agent prompt template
+pm-agents agents show design
+
+# Print version
+pm-agents version
+```
+
+## Specialist Agents
+
+| Agent | Output File | Dependencies |
+|-------|-------------|--------------|
+| design | `design-spec.md` | - |
+| tech | `technical-requirements.md` | design |
+| qa | `test-plan.md` | tech |
+| security | `security-assessment.md` | tech |
+| infra | `infrastructure-plan.md` | tech |
+
+## Configuration
+
+Create `.pm-agents/config.yaml` to customize:
+
+```yaml
+output_dir: ./outputs
+timeout: 300  # seconds per agent
+
+agents:
+  design:
+    prompt: |
+      You are a Design Lead. Read the PRD at {prd_path} and create a design specification.
+      Write your output to {output_path}.
+
+      Include:
+      - UI/UX requirements
+      - User flows (mermaid diagrams)
+      - Component specifications
+    output: design-spec.md
+    depends_on: []
+
+  tech:
+    prompt: |
+      You are a Tech Lead. Create technical requirements.
+      Write your output to {output_path}.
+    output: technical-requirements.md
+    depends_on: [design]
+```
+
+### Prompt Variables
+
+- `{prd_path}` - Absolute path to the PRD file
+- `{output_path}` - Absolute path to the output file
+
+### Environment Variables
+
+- `PM_AGENTS_OUTPUT_DIR` - Override output directory
+- `PM_AGENTS_TIMEOUT` - Override timeout (seconds)
+
+## How It Works
+
+1. **Parse PRD** - Reads the PRD file path
+2. **Spawn Agents** - Starts AgentAPI process per specialist (ports 3284+)
+3. **Health Check** - Waits for each agent to be ready
+4. **Send Task** - Sends prompt with PRD path and output path
+5. **Monitor** - Polls status until agents complete
+6. **Cleanup** - Kills AgentAPI processes on completion/interrupt
+
+### Parallel vs Sequential
+
+**Parallel mode (default):**
+- All agents start simultaneously
+- Agents read whatever files exist at runtime
+- Faster but dependencies may not be available
+
+**Sequential mode (`--sequential`):**
+- Agents run in dependency order (topological sort)
+- Each agent waits for dependencies to complete
+- Slower but dependencies are guaranteed
+
+## Development
+
+### Prerequisites
+
+- Go 1.21+
+- [golangci-lint](https://golangci-lint.run/) (for linting)
+- [goreleaser](https://goreleaser.com/) (for releases)
+
+### Commands
+
+```bash
+# Build
+make build
+
+# Run tests
+make test
+
+# Run linter
+make lint
+
+# Format code
+make fmt
+
+# Build for all platforms
+make build-all
+
+# Create release snapshot
+make release-snapshot
+
+# Clean
+make clean
+
+# Show all targets
+make help
+```
+
+### Project Structure
 
 ```
 pm-agent-workflow/
-├── apps/
-│   ├── server/           # Orchestration server
-│   └── dashboard/        # Next.js frontend
-├── packages/
-│   └── shared/           # Shared types
-├── .claude/
-│   ├── agents/           # Agent definitions
-│   └── commands/         # Slash commands
-└── docs/                 # Documentation
+├── cmd/pm-agents/           # Entry point
+├── internal/
+│   ├── agent/               # Agent lifecycle management
+│   ├── api/                 # AgentAPI HTTP client
+│   ├── cmd/                 # CLI commands
+│   └── config/              # Configuration loading
+├── .github/workflows/       # CI/CD pipelines
+├── docs/                    # Documentation
+├── examples/                # Sample PRDs
+├── .goreleaser.yml          # Release configuration
+├── .golangci.yml            # Linter configuration
+└── Makefile                 # Build automation
 ```
 
 ## Documentation
 
-- [Research Summary](docs/01-research-summary.md) - Background research and findings
-- [Framework Comparison](docs/02-framework-comparison.md) - Claude Agent SDK vs alternatives
+- [Research Summary](docs/01-research-summary.md) - Background research on multi-agent systems
+- [Framework Comparison](docs/02-framework-comparison.md) - Claude SDK vs alternatives analysis
 - [Requirements](docs/03-requirements.md) - Full requirements specification
-- [Implementation Plan](docs/04-implementation-plan.md) - Detailed implementation guide
+- [Implementation](docs/04-implementation-plan.md) - Implementation details and architecture
 
-## Usage
+## Limitations (v1)
 
-### 1. Create a Project
+- No web dashboard (CLI only)
+- No database persistence
+- No approval gates
+- No session resume after crash
+- macOS/Linux only (no Windows)
 
+## Troubleshooting
+
+### "agentapi not found"
+
+Install AgentAPI:
 ```bash
-curl -X POST http://localhost:8080/api/projects \
-  -H "Content-Type: application/json" \
-  -d '{"name": "My Product", "prdPath": "./prd.md"}'
+# Download from releases
+curl -fsSL "https://github.com/coder/agentapi/releases/latest/download/agentapi-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')" -o agentapi
+chmod +x agentapi
+sudo mv agentapi /usr/local/bin/
 ```
 
-### 2. Start Workflow
+### "timeout waiting for agent"
 
+- Check if Claude Code is authenticated: `claude --version`
+- Increase timeout: `pm-agents run prd.md --timeout 600`
+- Check agent logs: `pm-agents logs <agent>`
+
+### "port already in use"
+
+Kill existing processes:
 ```bash
-curl -X POST http://localhost:8080/api/projects/{id}/workflow \
-  -H "Content-Type: application/json" \
-  -d '{"agents": ["design-lead", "tech-lead", "qa-lead"], "parallel": true}'
+pm-agents stop --all
+# Or manually:
+lsof -i :3284-3290 | awk 'NR>1 {print $2}' | xargs kill
 ```
-
-### 3. Monitor via Dashboard
-
-Open `http://localhost:3000/projects/{id}` to:
-- Watch agents work in real-time
-- Approve/deny pending actions
-- Step into any agent session
-
-### 4. Review Outputs
-
-All outputs saved to `outputs/` directory:
-- `design-spec.md`
-- `technical-requirements.md`
-- `test-plan.md`
-- `security-assessment.md`
-- `infrastructure-plan.md`
-
-## API Reference
-
-### Projects
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/projects` | List all projects |
-| POST | `/api/projects` | Create project |
-| GET | `/api/projects/:id` | Get project details |
-
-### Agents
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/projects/:id/workflow` | Start workflow |
-| POST | `/api/agents/:id/pause` | Pause agent |
-| POST | `/api/agents/:id/resume` | Resume agent |
-| POST | `/api/agents/:id/inject` | Inject message |
-
-### Approvals
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/approvals` | List pending approvals |
-| POST | `/api/approvals/:id/approve` | Approve action |
-| POST | `/api/approvals/:id/deny` | Deny action |
-
-## WebSocket Events
-
-Connect to `ws://localhost:8080/ws` and subscribe to channels:
-
-```javascript
-// Subscribe to agent events
-ws.send(JSON.stringify({ type: "subscribe", channel: "agent:tech-lead" }));
-
-// Subscribe to approvals
-ws.send(JSON.stringify({ type: "subscribe", channel: "approvals" }));
-```
-
-### Event Types
-
-- `started` - Agent began execution
-- `message` - Agent produced output
-- `toolUse` - Agent used a tool
-- `completed` - Agent finished
-- `approvalRequired` - Action needs approval
-
-## Configuration
-
-### Environment Variables
-
-```bash
-# Required
-ANTHROPIC_API_KEY=sk-ant-...
-
-# Optional
-PORT=8080
-DATABASE_URL=file:./data.db
-LOG_LEVEL=info
-```
-
-### Approval Rules
-
-Edit `config/approval-rules.json`:
-
-```json
-{
-  "rules": [
-    {
-      "tool": "Write|Edit",
-      "requireApproval": true,
-      "autoApprovePatterns": ["^outputs/"]
-    },
-    {
-      "tool": "Bash",
-      "requireApproval": true,
-      "autoApprovePatterns": ["^(ls|cat|grep)"]
-    }
-  ]
-}
-```
-
-## Development
-
-### Running Tests
-
-```bash
-pnpm test           # Run all tests
-pnpm test:unit      # Unit tests only
-pnpm test:e2e       # E2E tests
-```
-
-### Building
-
-```bash
-pnpm build          # Build all packages
-pnpm build:server   # Build server only
-pnpm build:dashboard # Build dashboard only
-```
-
-### Docker
-
-```bash
-docker-compose up -d    # Start all services
-docker-compose logs -f  # View logs
-```
-
-## Roadmap
-
-### v1.0 (Current)
-- [x] Research and planning
-- [ ] Core agent runtime
-- [ ] Multi-agent orchestration
-- [ ] Approval system
-- [ ] Dashboard UI
-- [ ] Session persistence
-
-### v1.1
-- [ ] Custom agent definitions
-- [ ] PRD templates
-- [ ] Output export (PDF, Confluence)
-
-### v2.0
-- [ ] Multi-user collaboration
-- [ ] Jira/Linear integration
-- [ ] Analytics dashboard
-- [ ] Custom workflows
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run tests
+4. Run `make lint test`
 5. Submit a pull request
 
 ## License
@@ -290,6 +329,6 @@ MIT
 
 ## Acknowledgments
 
-- Built on [Claude Agent SDK](https://docs.claude.com/en/docs/agent-sdk/overview) by Anthropic
-- Research informed by [Mastra](https://mastra.ai) and [VoltAgent](https://voltagent.dev)
-# pagent
+- [AgentAPI](https://github.com/coder/agentapi) - HTTP wrapper for Claude Code
+- [Claude Code](https://claude.ai/claude-code) - AI coding assistant
+- [Cobra](https://github.com/spf13/cobra) - CLI framework

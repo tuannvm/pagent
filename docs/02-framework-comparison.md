@@ -1,5 +1,7 @@
 # Framework Comparison: Claude Agent SDK vs Mastra vs VoltAgent
 
+> **Implementation Note:** This document was created during the research phase. The final implementation chose [AgentAPI](https://github.com/coder/agentapi) over the Claude Agent SDK for simplicity. See [04-implementation-plan.md](./04-implementation-plan.md) for details.
+
 ## Overview
 
 This document provides a detailed comparison of three TypeScript frameworks for building AI agent systems, based on research conducted in December 2025.
