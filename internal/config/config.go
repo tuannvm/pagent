@@ -172,6 +172,126 @@ Be practical and consider both development and production environments.`,
 				Output:    "infrastructure-plan.md",
 				DependsOn: []string{"tech"},
 			},
+			"backend": {
+				Prompt: `You are a Senior Go Developer. Read the PRD at {prd_path} and the technical requirements at outputs/technical-requirements.md.
+
+Your task is to implement the COMPLETE backend API in Go. Create all necessary files in the outputs/code/ directory.
+
+IMPORTANT: Create actual, working Go code files - not documentation.
+
+Create this directory structure:
+outputs/code/
+├── cmd/
+│   └── server/
+│       └── main.go           # Application entry point
+├── internal/
+│   ├── handler/              # HTTP handlers
+│   │   ├── auth.go
+│   │   ├── project.go
+│   │   └── task.go
+│   ├── service/              # Business logic
+│   │   ├── auth.go
+│   │   ├── project.go
+│   │   └── task.go
+│   ├── repository/           # Database operations
+│   │   ├── user.go
+│   │   ├── project.go
+│   │   └── task.go
+│   ├── model/                # Data models
+│   │   └── models.go
+│   ├── middleware/           # HTTP middleware
+│   │   ├── auth.go
+│   │   └── logging.go
+│   └── config/               # Configuration
+│       └── config.go
+├── go.mod
+├── go.sum (empty placeholder)
+├── Makefile
+├── Dockerfile
+└── README.md
+
+Requirements:
+- Use Chi or standard library for HTTP routing
+- Use sqlc or raw SQL for database operations
+- Implement JWT authentication
+- Include proper error handling
+- Add input validation
+- Follow Go best practices and idioms
+
+Write the completion marker to {output_path} when done.`,
+				Output:    "code/.backend-complete",
+				DependsOn: []string{"tech", "security"},
+			},
+			"database": {
+				Prompt: `You are a Database Engineer. Read the PRD at {prd_path} and technical requirements at outputs/technical-requirements.md.
+
+Your task is to create the complete database schema and migrations. Create all files in outputs/code/migrations/.
+
+IMPORTANT: Create actual SQL files - not documentation.
+
+Create this structure:
+outputs/code/migrations/
+├── 000001_create_users.up.sql
+├── 000001_create_users.down.sql
+├── 000002_create_projects.up.sql
+├── 000002_create_projects.down.sql
+├── 000003_create_tasks.up.sql
+├── 000003_create_tasks.down.sql
+└── README.md
+
+Also create:
+outputs/code/sqlc.yaml          # sqlc configuration
+outputs/code/internal/db/
+├── queries.sql                  # SQL queries for sqlc
+└── db.go                        # Database connection helper
+
+Requirements:
+- PostgreSQL 16 compatible
+- Include indexes for common queries
+- Add foreign key constraints
+- Include created_at/updated_at timestamps
+- Use UUID for primary keys
+- Follow golang-migrate format
+
+Write the completion marker to {output_path} when done.`,
+				Output:    "code/.database-complete",
+				DependsOn: []string{"tech"},
+			},
+			"tests": {
+				Prompt: `You are a Test Engineer. Read the PRD at {prd_path}, test plan at outputs/test-plan.md, and the implemented code in outputs/code/.
+
+Your task is to write comprehensive tests. Create test files alongside the code they test.
+
+IMPORTANT: Create actual Go test files - not documentation.
+
+Create these test files:
+outputs/code/internal/handler/auth_test.go
+outputs/code/internal/handler/project_test.go
+outputs/code/internal/handler/task_test.go
+outputs/code/internal/service/auth_test.go
+outputs/code/internal/service/project_test.go
+outputs/code/internal/service/task_test.go
+outputs/code/internal/repository/user_test.go
+outputs/code/internal/repository/project_test.go
+outputs/code/internal/repository/task_test.go
+
+Also create:
+outputs/code/internal/testutil/
+├── fixtures.go                  # Test fixtures and helpers
+└── mock.go                      # Mock implementations
+
+Requirements:
+- Use standard testing package
+- Use testify for assertions
+- Include table-driven tests
+- Test happy paths and error cases
+- Include integration test examples
+- Mock external dependencies
+
+Write the completion marker to {output_path} when done.`,
+				Output:    "code/.tests-complete",
+				DependsOn: []string{"backend", "database", "qa"},
+			},
 		},
 	}
 }

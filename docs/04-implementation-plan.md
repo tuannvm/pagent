@@ -1,6 +1,8 @@
 # Implementation Summary: PM Agent Workflow CLI
 
 > **Status:** Implemented and verified against [AgentAPI OpenAPI spec](https://github.com/coder/agentapi/blob/main/openapi.json)
+>
+> **Tested:** Full end-to-end workflow producing 5 spec documents + working Go codebase
 
 This document describes the actual implementation. The earlier research explored Claude Agent SDK and other frameworks, but the final implementation uses a simpler CLI-first approach with AgentAPI for faster iteration and reduced complexity.
 
@@ -104,14 +106,40 @@ type Message struct {
 type Status struct {
     Status string `json:"status"` // "running" or "stable"
 }
+
+// GET /messages response (note: wrapped in object, not direct array)
+type MessagesResponse struct {
+    Messages []ConversationMessage `json:"messages"`
+}
+
+type ConversationMessage struct {
+    ID      int    `json:"id"`
+    Role    string `json:"role"`    // "user" or "agent"
+    Content string `json:"content"`
+    Time    string `json:"time"`
+}
 ```
+
+**Important: Agent Startup Behavior**
+
+Claude Code starts in `"running"` state while loading. The CLI must:
+1. Wait for API to respond (`WaitForHealthy`)
+2. Wait for `"stable"` state (`WaitForStable`)
+3. Only then send the initial task message
 
 ### 3. Configuration (`internal/config/config.go`)
 
 YAML-based configuration with:
-- Default agent prompts
+- Default agent prompts (8 agents: 5 spec + 3 developer)
 - Dependency ordering
 - Environment variable overrides (`PM_AGENTS_OUTPUT_DIR`, `PM_AGENTS_TIMEOUT`)
+
+**Agent Types:**
+
+| Category | Agents | Output |
+|----------|--------|--------|
+| Spec Agents | design, tech, qa, security, infra | Markdown docs |
+| Dev Agents | backend, database, tests | Working Go code |
 
 ### 4. CLI Commands (`internal/cmd/`)
 
@@ -210,6 +238,53 @@ make lint
 
 # Release snapshot
 make release-snapshot
+```
+
+## Verified Workflow
+
+The following end-to-end workflow was tested successfully:
+
+```bash
+# Run all 8 agents in sequential mode
+pm-agents run ./examples/task-manager-prd.md --sequential -v
+```
+
+**Outputs Generated:**
+
+| Agent | Output | Size |
+|-------|--------|------|
+| design | `design-spec.md` | 19KB |
+| tech | `technical-requirements.md` | 38KB |
+| qa | `test-plan.md` | 39KB |
+| security | `security-assessment.md` | 38KB |
+| infra | `infrastructure-plan.md` | 37KB |
+| database | `code/migrations/*.sql` | 8 files |
+| backend | `code/internal/**/*.go` | 15+ files |
+| tests | `code/**/*_test.go` | (partial) |
+
+**Generated Code Structure:**
+```
+outputs/code/
+├── cmd/server/main.go
+├── internal/
+│   ├── handler/       # HTTP handlers
+│   ├── service/       # Business logic
+│   ├── repository/    # Database ops
+│   ├── model/         # Data models
+│   ├── middleware/    # Auth, logging
+│   ├── config/        # Configuration
+│   └── db/            # DB utilities
+├── migrations/        # PostgreSQL migrations
+├── go.mod, Dockerfile, Makefile
+└── sqlc.yaml
+```
+
+**Build Verification:**
+```bash
+cd outputs/code
+go mod tidy
+go build ./...  # ✓ Passes
+go vet ./...    # ✓ Passes
 ```
 
 ## References

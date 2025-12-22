@@ -9,11 +9,18 @@ A CLI tool that orchestrates Claude Code specialist agents to transform PRDs int
 ## Overview
 
 `pm-agents` spawns specialist agents via [AgentAPI](https://github.com/coder/agentapi) to produce:
+
+**Specification Documents:**
 - Design specifications
 - Technical requirements documents
 - Test plans
 - Security assessments
 - Infrastructure plans
+
+**Working Code (Developer Agents):**
+- Go backend API implementation
+- PostgreSQL database migrations
+- Unit and integration tests
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -64,8 +71,8 @@ make install
 ## Quick Start
 
 ```bash
-# Run all specialists on a PRD
-pm-agents run ./prd.md
+# Run all specialists on a PRD (documentation only)
+pm-agents run ./prd.md --agents design,tech,qa,security,infra
 
 # Output files will be in ./outputs/
 ls outputs/
@@ -74,6 +81,21 @@ ls outputs/
 # test-plan.md
 # security-assessment.md
 # infrastructure-plan.md
+```
+
+### Full PRD-to-Code Pipeline
+
+```bash
+# Run all 8 agents (docs + code generation)
+pm-agents run ./prd.md --sequential -v
+
+# Generated outputs:
+ls outputs/
+# Docs: design-spec.md, technical-requirements.md, etc.
+# Code: code/cmd/server/main.go, code/internal/*, code/migrations/*
+
+# Verify generated code compiles
+cd outputs/code && go mod tidy && go build ./...
 ```
 
 ## Usage
@@ -151,6 +173,8 @@ pm-agents version
 
 ## Specialist Agents
 
+### Spec Agents (Documentation)
+
 | Agent | Output File | Dependencies |
 |-------|-------------|--------------|
 | design | `design-spec.md` | - |
@@ -158,6 +182,14 @@ pm-agents version
 | qa | `test-plan.md` | tech |
 | security | `security-assessment.md` | tech |
 | infra | `infrastructure-plan.md` | tech |
+
+### Developer Agents (Code Generation)
+
+| Agent | Output | Dependencies |
+|-------|--------|--------------|
+| backend | `code/` (Go API) | tech, security |
+| database | `code/migrations/` (SQL) | tech |
+| tests | `code/*_test.go` | backend, database, qa |
 
 ## Configuration
 
@@ -279,6 +311,7 @@ pm-agent-workflow/
 - [Framework Comparison](docs/02-framework-comparison.md) - Claude SDK vs alternatives analysis
 - [Requirements](docs/03-requirements.md) - Full requirements specification
 - [Implementation](docs/04-implementation-plan.md) - Implementation details and architecture
+- [User Tutorial](docs/05-tutorial.md) - Step-by-step guide to using pm-agents
 
 ## Limitations (v1)
 
@@ -287,6 +320,7 @@ pm-agent-workflow/
 - No approval gates
 - No session resume after crash
 - macOS/Linux only (no Windows)
+- Generated code may require minor fixes (verified to compile with `go build`)
 
 ## Troubleshooting
 

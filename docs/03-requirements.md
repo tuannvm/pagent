@@ -131,7 +131,9 @@ pm-agents agents show design
 
 ### FR-3: Specialist Agents
 
-Five specialists, each with a focused prompt:
+Eight specialists organized into two categories:
+
+**Specification Agents** (produce documentation):
 
 | Agent | Input | Output | Waits For |
 |-------|-------|--------|-----------|
@@ -140,6 +142,14 @@ Five specialists, each with a focused prompt:
 | **qa** | PRD, design-spec, TRD | `test-plan.md` | tech (optional) |
 | **security** | PRD, TRD | `security-assessment.md` | tech (optional) |
 | **infra** | PRD, TRD | `infrastructure-plan.md` | tech (optional) |
+
+**Developer Agents** (produce working code):
+
+| Agent | Input | Output | Waits For |
+|-------|-------|--------|-----------|
+| **backend** | PRD, TRD, security | `code/` (Go API) | tech, security |
+| **database** | PRD, TRD | `code/migrations/` (SQL) | tech |
+| **tests** | PRD, test-plan, code | `code/*_test.go` | backend, database, qa |
 
 **Default mode:** All run in parallel (agents read whatever files exist).
 **Sequential mode:** `--sequential` flag enforces dependency order.
@@ -398,8 +408,9 @@ agents:
 - Multi-user support
 - Windows support
 - Cost tracking / token counting
-- Custom agent types beyond the five specialists
 - Integration with external tools (Jira, Linear, etc.)
+
+**Note:** Custom agent types (developer agents) were added to demonstrate extensibility.
 
 ## Future Considerations (v2+)
 
@@ -425,7 +436,8 @@ If v1 proves useful, consider:
 |------|------------|
 | PRD | Product Requirements Document — input specification |
 | AgentAPI | HTTP wrapper around Claude Code (coder/agentapi) |
-| Specialist | One of 5 agent types (design, tech, qa, security, infra) |
+| Spec Agent | One of 5 specification agent types (design, tech, qa, security, infra) |
+| Dev Agent | One of 3 developer agent types (backend, database, tests) |
 | Stable | AgentAPI status indicating agent is idle and can receive messages |
 | Running | AgentAPI status indicating agent is actively processing |
 
