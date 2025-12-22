@@ -4,6 +4,7 @@
 
 This document captures research conducted in December 2025 on building a Product Manager (PM) agent system that can control multiple specialist sub-agents for product development workflows.
 
+
 ## Research Goals
 
 Build an AI agent orchestration system where:
