@@ -18,7 +18,7 @@ import (
 
 const (
 	basePort      = 3284
-	healthTimeout = 60 * time.Second // Increased for slow Claude Code startup
+	healthTimeout = 120 * time.Second // 2 min for Claude Code to fully initialize
 )
 
 // State file paths
