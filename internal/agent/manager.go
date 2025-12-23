@@ -208,10 +208,20 @@ func (m *Manager) spawnAgent(ctx context.Context, name string, port int) (*Runni
 
 // waitForCompletion waits for agent to finish processing
 func (m *Manager) waitForCompletion(ctx context.Context, agent *RunningAgent, timeout time.Duration) error {
-	deadline := time.Now().Add(timeout)
+	start := time.Now()
 	wasRunning := false
+	lastStatus := ""
+	lastProgressLog := time.Now()
+	pollInterval := 1 * time.Second
+	consecutiveErrors := 0
+	maxConsecutiveErrors := 30 // 30 consecutive failures (~30s) indicates dead agent
 
-	for time.Now().Before(deadline) {
+	for {
+		// Check timeout (0 = no timeout, poll indefinitely)
+		if timeout > 0 && time.Since(start) > timeout {
+			return fmt.Errorf("timeout waiting for agent to complete")
+		}
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -220,12 +230,26 @@ func (m *Manager) waitForCompletion(ctx context.Context, agent *RunningAgent, ti
 
 		status, err := agent.Client.GetStatus()
 		if err != nil {
-			// Process might have crashed
-			if agent.Process.ProcessState != nil && agent.Process.ProcessState.Exited() {
-				return fmt.Errorf("agent process exited unexpectedly")
+			consecutiveErrors++
+			if consecutiveErrors >= maxConsecutiveErrors {
+				return fmt.Errorf("agent API unreachable after %d consecutive failures - process likely crashed", consecutiveErrors)
 			}
-			time.Sleep(1 * time.Second)
+			if m.verbose && consecutiveErrors%10 == 0 {
+				fmt.Printf("[DEBUG] Agent %s API error (attempt %d/%d): %v\n",
+					agent.Name, consecutiveErrors, maxConsecutiveErrors, err)
+			}
+			time.Sleep(pollInterval)
 			continue
+		}
+		consecutiveErrors = 0 // Reset on successful API call
+
+		// Track status transitions
+		if status.Status != lastStatus {
+			if m.verbose {
+				fmt.Printf("[DEBUG] Agent %s status: %s (elapsed: %s)\n",
+					agent.Name, status.Status, time.Since(start).Round(time.Second))
+			}
+			lastStatus = status.Status
 		}
 
 		if status.Status == "running" {
@@ -234,13 +258,22 @@ func (m *Manager) waitForCompletion(ctx context.Context, agent *RunningAgent, ti
 
 		// Agent is done when it transitions from running to stable
 		if wasRunning && status.Status == "stable" {
+			if m.verbose {
+				fmt.Printf("[DEBUG] Agent %s completed in %s\n",
+					agent.Name, time.Since(start).Round(time.Second))
+			}
 			return nil
 		}
 
-		time.Sleep(2 * time.Second)
-	}
+		// Progress indicator every 30 seconds
+		if m.verbose && time.Since(lastProgressLog) > 30*time.Second {
+			fmt.Printf("[DEBUG] Agent %s still %s... (elapsed: %s)\n",
+				agent.Name, status.Status, time.Since(start).Round(time.Second))
+			lastProgressLog = time.Now()
+		}
 
-	return fmt.Errorf("timeout waiting for agent to complete")
+		time.Sleep(pollInterval)
+	}
 }
 
 // stopAgent gracefully stops an agent

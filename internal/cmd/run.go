@@ -47,7 +47,7 @@ func init() {
 	runCmd.Flags().StringVarP(&outputDir, "output", "o", "./outputs", "output directory")
 	runCmd.Flags().BoolVarP(&sequential, "sequential", "s", false, "run agents in dependency order")
 	runCmd.Flags().StringVarP(&configPath, "config", "c", "", "config file path")
-	runCmd.Flags().IntVarP(&timeoutSeconds, "timeout", "t", 300, "timeout per agent in seconds")
+	runCmd.Flags().IntVarP(&timeoutSeconds, "timeout", "t", 0, "timeout per agent in seconds (0=infinite, polls until completion)")
 }
 
 func runCommand(cmd *cobra.Command, args []string) error {

@@ -4,7 +4,7 @@ bin/
 dist/
 
 # Output directory
-outputs/
+outputs-*/
 
 # OS files
 .DS_Store

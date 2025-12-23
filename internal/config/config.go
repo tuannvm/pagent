@@ -90,7 +90,7 @@ func (c *Config) ApplyEnvOverrides() {
 func Default() *Config {
 	return &Config{
 		OutputDir: "./outputs",
-		Timeout:   600, // 10 minutes per agent (complex prompts need time)
+		Timeout:   0, // 0 = no timeout (poll until completion). Set via --timeout for safety net.
 		Agents: map[string]AgentConfig{
 			// ============================================================
 			// SPECIFICATION PHASE - Produces design documents
