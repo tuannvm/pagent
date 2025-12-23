@@ -78,10 +78,25 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 		}
 	}
 
-	// Allocate port
-	port := m.allocatePort()
 	outputPath := filepath.Join(m.config.OutputDir, agentCfg.Output)
 	absOutputPath, _ := filepath.Abs(outputPath)
+
+	// Resume mode: skip if output already exists
+	if m.config.ResumeMode {
+		if _, err := os.Stat(absOutputPath); err == nil {
+			if m.verbose {
+				fmt.Printf("[DEBUG] Skipping agent %s - output already exists: %s\n", name, absOutputPath)
+			}
+			return Result{
+				Agent:      name,
+				OutputPath: absOutputPath,
+				Duration:   time.Since(start),
+			}
+		}
+	}
+
+	// Allocate port
+	port := m.allocatePort()
 
 	if m.verbose {
 		fmt.Printf("[DEBUG] Starting agent %s on port %d\n", name, port)
@@ -89,11 +104,15 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 
 	// Build the prompt using template loader
 	absOutputDir, _ := filepath.Abs(m.config.OutputDir)
+	existingFiles := m.listExistingFiles(absOutputDir)
+
 	promptVars := prompt.Variables{
-		PRDPath:    m.prdPath,
-		OutputDir:  absOutputDir,
-		OutputPath: absOutputPath,
-		AgentName:  name,
+		PRDPath:       m.prdPath,
+		OutputDir:     absOutputDir,
+		OutputPath:    absOutputPath,
+		AgentName:     name,
+		ExistingFiles: existingFiles,
+		HasExisting:   len(existingFiles) > 0,
 	}
 
 	renderedPrompt, err := m.promptLoader.LoadAndRender(name, agentCfg.Prompt, agentCfg.PromptFile, promptVars)
@@ -441,4 +460,31 @@ func (m *Manager) TopologicalSort(agents []string) []string {
 	}
 
 	return result
+}
+
+// listExistingFiles returns a list of files in the output directory
+func (m *Manager) listExistingFiles(outputDir string) []string {
+	var files []string
+
+	err := filepath.Walk(outputDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Ignore errors
+		}
+		if info.IsDir() {
+			return nil
+		}
+		// Get relative path from output dir
+		relPath, err := filepath.Rel(outputDir, path)
+		if err != nil {
+			return nil
+		}
+		files = append(files, relPath)
+		return nil
+	})
+
+	if err != nil {
+		return nil
+	}
+
+	return files
 }

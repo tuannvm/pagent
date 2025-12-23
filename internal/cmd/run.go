@@ -21,6 +21,7 @@ var (
 	sequential     bool
 	configPath     string
 	timeoutSeconds int
+	resumeMode     bool
 )
 
 var runCmd = &cobra.Command{
@@ -48,6 +49,7 @@ func init() {
 	runCmd.Flags().BoolVarP(&sequential, "sequential", "s", false, "run agents in dependency order")
 	runCmd.Flags().StringVarP(&configPath, "config", "c", "", "config file path")
 	runCmd.Flags().IntVarP(&timeoutSeconds, "timeout", "t", 0, "timeout per agent in seconds (0=infinite, polls until completion)")
+	runCmd.Flags().BoolVarP(&resumeMode, "resume", "r", false, "skip agents whose outputs already exist")
 }
 
 func runCommand(cmd *cobra.Command, args []string) error {
@@ -75,6 +77,7 @@ func runCommand(cmd *cobra.Command, args []string) error {
 		cfg.OutputDir = outputDir
 	}
 	cfg.Timeout = timeoutSeconds
+	cfg.ResumeMode = resumeMode
 
 	// Ensure output directory exists
 	if err := os.MkdirAll(cfg.OutputDir, 0755); err != nil {

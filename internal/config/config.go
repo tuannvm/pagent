@@ -11,9 +11,10 @@ import (
 
 // Config represents the pm-agents configuration
 type Config struct {
-	OutputDir string                 `yaml:"output_dir"`
-	Timeout   int                    `yaml:"timeout"`
-	Agents    map[string]AgentConfig `yaml:"agents"`
+	OutputDir  string                 `yaml:"output_dir"`
+	Timeout    int                    `yaml:"timeout"`
+	ResumeMode bool                   `yaml:"-"` // Set via CLI flag, not config file
+	Agents     map[string]AgentConfig `yaml:"agents"`
 }
 
 // AgentConfig represents a single agent's configuration

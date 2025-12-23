@@ -15,10 +15,12 @@ var embeddedTemplates embed.FS
 
 // Variables holds the template variables for prompt rendering
 type Variables struct {
-	PRDPath   string
-	OutputDir string
-	OutputPath string
-	AgentName string
+	PRDPath       string
+	OutputDir     string
+	OutputPath    string
+	AgentName     string
+	ExistingFiles []string // List of files already in OutputDir
+	HasExisting   bool     // True if there are existing outputs to consider
 	// Custom allows arbitrary key-value pairs
 	Custom map[string]string
 }
