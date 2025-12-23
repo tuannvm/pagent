@@ -4,7 +4,16 @@ Read these inputs carefully:
 - PRD: {{.PRDPath}}
 - Architecture: {{.OutputDir}}/architecture.md (THIS IS YOUR SOURCE OF TRUTH)
 - Security: {{.OutputDir}}/security-assessment.md (MUST address all security requirements)
-
+{{if .HasExisting}}
+## EXISTING CODE DETECTED
+The following files already exist in the output directory:
+{{range .ExistingFiles}}- {{.}}
+{{end}}
+IMPORTANT: Review the existing code first. Build upon and integrate with what exists.
+- Do NOT recreate files that already exist unless they need fixes
+- Ensure new code is compatible with existing implementations
+- If existing code conflicts with architecture.md, update the existing code to match
+{{end}}
 IMPORTANT: You own ALL code. Create a cohesive, working codebase.
 
 Create this structure in {{.OutputDir}}/code/:

@@ -6,7 +6,13 @@ Read these inputs:
 - Security: {{.OutputDir}}/security-assessment.md
 - Test Plan: {{.OutputDir}}/test-plan.md
 - Implemented Code: {{.OutputDir}}/code/
-
+{{if .HasExisting}}
+## EXISTING FILES
+The following files exist in the output directory:
+{{range .ExistingFiles}}- {{.}}
+{{end}}
+Review all existing code and test files before making changes.
+{{end}}
 ## Task 1: Verification Report
 Create {{.OutputDir}}/verification-report.md with:
 
