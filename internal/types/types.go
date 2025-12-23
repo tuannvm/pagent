@@ -70,8 +70,11 @@ type ArchitecturePreferences struct {
 	DocumentationLevel string `yaml:"documentation_level"`
 
 	// DependencyStyle controls third-party dependency usage
-	// Options: minimal (prefer stdlib), standard, batteries (feature-rich libs)
-	// Default: standard
+	// Options:
+	//   - minimal: Prefer Go stdlib (net/http, encoding/json, database/sql)
+	//   - standard: Common well-maintained libs where they add value
+	//   - batteries: Feature-rich libs for faster development
+	// Default: minimal
 	DependencyStyle string `yaml:"dependency_style"`
 
 	// ErrorHandling controls error handling sophistication
@@ -139,7 +142,7 @@ func DefaultPreferences() ArchitecturePreferences {
 		Language:           "go",       // Go is the default language
 		TestingDepth:       "unit",     // Unit tests as baseline
 		DocumentationLevel: "standard", // README + basic docs
-		DependencyStyle:    "standard", // Balance between stdlib and convenience
+		DependencyStyle:    "minimal",  // Prefer stdlib over third-party packages
 		ErrorHandling:      "structured", // Typed errors with context
 		Containerized:      true,       // Docker/K8s is standard
 		IncludeCI:          true,       // CI/CD is expected

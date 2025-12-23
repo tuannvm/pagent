@@ -202,7 +202,7 @@ preferences:
   language: go              # go, python, typescript, java, rust
   testing_depth: unit       # none, unit, integration, e2e
   documentation_level: standard  # minimal, standard, comprehensive
-  dependency_style: standard     # minimal (stdlib), standard, batteries
+  dependency_style: minimal      # minimal (stdlib), standard, batteries
   error_handling: structured     # simple, structured, comprehensive
   containerized: true       # Generate Dockerfile
   include_ci: true          # Generate CI/CD pipelines

@@ -245,6 +245,7 @@ preferences:
   language: go              # go, python, typescript, java, rust
   testing_depth: unit       # none, unit, integration, e2e
   documentation_level: standard
+  dependency_style: minimal       # prefer Go stdlib over third-party
   containerized: true
   include_ci: true
   include_iac: true

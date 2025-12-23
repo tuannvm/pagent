@@ -173,11 +173,12 @@ You are building an **MVP/prototype**. Prioritize shipping over perfection:
 - Flat structure - avoid deep nesting
 - Minimal comments (code should be self-explanatory)
 
-**DEPENDENCIES:**
-- Prefer stdlib where reasonable
-- Chi for routing (lightweight)
-- pgx for Postgres (or SQLite for simplicity)
-- Basic JWT library
+**DEPENDENCIES (prefer stdlib):**
+- Use `net/http` for routing (stdlib ServeMux is sufficient for MVP)
+- Use `database/sql` with pgx driver for Postgres
+- Use `encoding/json` for JSON (no third-party JSON libs)
+- Use `crypto/*` for JWT/auth (or minimal jwt-go if needed)
+- Avoid frameworks like Gin, Echo, Chi unless explicitly requested
 
 **ERROR HANDLING:**
 - Simple error returns: `return fmt.Errorf("failed to X: %w", err)`
@@ -306,12 +307,12 @@ You are building a **growing product**. Balance quality with velocity:
 - Reasonable error handling
 - Comments for non-obvious logic
 
-**DEPENDENCIES:**
-- Chi for routing
-- pgx with connection pooling
-- zerolog for structured logging
-- go-playground/validator for validation
-- Basic JWT handling
+**DEPENDENCIES (prefer stdlib):**
+- Use `net/http` with stdlib ServeMux (Go 1.22+ has method routing)
+- Use `database/sql` with pgx driver and connection pooling
+- Use `log/slog` for structured logging (stdlib, Go 1.21+)
+- Use stdlib `encoding/json` for validation (or minimal validator if complex)
+- Avoid heavy frameworks unless explicitly requested
 
 **ERROR HANDLING:**
 - Wrapped errors with context
