@@ -235,43 +235,85 @@ Run `pm-agents init` to create `.pm-agents/config.yaml`:
 output_dir: ./outputs
 timeout: 300  # seconds per agent
 
+# Implementation style: minimal, balanced, production
+persona: balanced
+
+# Architecture preferences
+preferences:
+  stateless: false          # true = event-driven, false = database-backed
+  api_style: rest           # rest, graphql, grpc
+  language: go              # go, python, typescript, java, rust
+  testing_depth: unit       # none, unit, integration, e2e
+  documentation_level: standard
+  containerized: true
+  include_ci: true
+  include_iac: true
+
+# Technology stack
+stack:
+  cloud: aws
+  compute: kubernetes
+  database: postgres
+  cache: redis
+  iac: terraform
+  gitops: argocd
+  ci: github-actions
+  monitoring: prometheus
+
+# Agent customization (prompts loaded from embedded templates)
 agents:
-  design:
-    prompt: |
-      You are a Design Lead. Read the PRD at {prd_path}...
-    output: design-spec.md
+  architect:
+    output: architecture.md
     depends_on: []
 
-  tech:
-    prompt: |
-      You are a Tech Lead...
-    output: technical-requirements.md
-    depends_on: [design]
+  qa:
+    output: test-plan.md
+    depends_on: [architect]
 
-  # ... more agents
+  security:
+    output: security-assessment.md
+    depends_on: [architect]
+
+  implementer:
+    output: code/.complete
+    depends_on: [architect, security]
+
+  verifier:
+    output: code/.verified
+    depends_on: [implementer, qa]
 ```
 
-### Customizing Prompts
+### Personas
 
-Edit `.pm-agents/config.yaml` to customize agent behavior:
+Choose an implementation style based on your needs:
+
+| Persona | Use Case | Characteristics |
+|---------|----------|-----------------|
+| `minimal` | MVP, prototype | Ship fast, simple code, skip observability |
+| `balanced` | Growing product | Essential quality, maintainable code |
+| `production` | Enterprise | Comprehensive testing, security, observability |
+
+```bash
+# Override persona via CLI
+pm-agents run prd.md --persona minimal
+```
+
+### Customizing Technology Stack
+
+Tailor the stack to your infrastructure:
 
 ```yaml
-agents:
-  design:
-    prompt: |
-      You are a Senior UX Designer specializing in mobile apps.
-
-      Read the PRD at {prd_path} and create a design specification.
-      Write your output to {output_path}.
-
-      Focus on:
-      - Mobile-first design
-      - Accessibility (WCAG 2.1 AA)
-      - Dark mode support
-
-      Use Figma component naming conventions.
-    output: design-spec.md
-    depends_on: []
+# Example: GCP + MongoDB setup
+stack:
+  cloud: gcp
+  compute: gke
+  database: mongodb
+  cache: memcached
+  message_queue: pubsub
+  iac: terraform
+  gitops: flux
+  ci: gitlab-ci
+  monitoring: datadog
 ```
 
 ### Prompt Variables
@@ -295,35 +337,57 @@ PM_AGENTS_OUTPUT_DIR=./docs pm-agents run prd.md
 PM_AGENTS_TIMEOUT=600 pm-agents run prd.md
 ```
 
-## Parallel vs Sequential Mode
+## Execution Modes
 
 ### Parallel Mode (Default)
 
-All agents run simultaneously:
+Agents run concurrently within dependency levels:
 
 ```bash
 pm-agents run ./prd.md
 ```
 
-- Faster execution
-- Agents read whatever files exist at runtime
-- Best when agents are independent
+**How it works:**
+```
+Level 0: architect (no dependencies)
+Level 1: qa, security (both run in parallel)
+Level 2: implementer
+Level 3: verifier
+```
+
+- Each level must complete before the next starts
+- Faster than sequential while respecting dependencies
+- Best for most workflows
 
 ### Sequential Mode
 
-Agents run in dependency order:
+Agents run one at a time in dependency order:
 
 ```bash
 pm-agents run ./prd.md --sequential
 ```
 
-Execution order based on `depends_on`:
-1. `design` (no dependencies)
-2. `tech` (depends on design)
-3. `qa`, `security`, `infra` (depend on tech)
+- Strictest ordering: architect → qa → security → implementer → verifier
+- Slowest but most predictable
+- Useful for debugging or constrained resources
 
-- Slower but dependencies guaranteed
-- Each agent can read previous outputs
+### Resume Mode
+
+Skip agents whose outputs are already up-to-date:
+
+```bash
+pm-agents run ./prd.md --resume
+```
+
+**Change detection uses content hashing (SHA-256):**
+- Input files changed?
+- Configuration (persona, stack, preferences) changed?
+- Dependency outputs changed?
+
+```bash
+# Force regeneration of all outputs
+pm-agents run ./prd.md --force
+```
 
 ## Troubleshooting
 
@@ -441,12 +505,13 @@ cd outputs/code && go build ./...
 
 ## Tips
 
-1. **Start with sequential mode** for complex PRDs where dependencies matter
-2. **Use verbose mode** (`-v`) to see what's happening
-3. **Customize prompts** for your domain/tech stack
-4. **Check logs** if an agent seems stuck
-5. **Send guidance** to redirect agents that go off-track
-6. **Increase timeout** for complex tasks
+1. **Use parallel mode** (default) for most workflows - it respects dependencies while being faster
+2. **Use `--resume`** during iteration to skip up-to-date agents
+3. **Choose the right persona**: `minimal` for prototypes, `balanced` for most projects, `production` for enterprise
+4. **Customize the stack** to match your infrastructure (cloud, database, CI/CD)
+5. **Use verbose mode** (`-v`) to see what's happening
+6. **Check logs** if an agent seems stuck (`pm-agents logs <agent>`)
+7. **Increase timeout** for complex tasks (`--timeout 600`)
 
 ## Next Steps
 

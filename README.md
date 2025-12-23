@@ -192,26 +192,65 @@ Create `.pm-agents/config.yaml` to customize:
 output_dir: ./outputs
 timeout: 300  # seconds per agent
 
-agents:
-  design:
-    prompt: |
-      You are a Design Lead. Read the PRD at {prd_path} and create a design specification.
-      Write your output to {output_path}.
+# Implementation style (minimal, balanced, production)
+persona: balanced
 
-      Include:
-      - UI/UX requirements
-      - User flows (mermaid diagrams)
-      - Component specifications
-    output: design-spec.md
+# Architecture preferences
+preferences:
+  stateless: false          # true = event-driven, false = database-backed
+  api_style: rest           # rest, graphql, grpc
+  language: go              # go, python, typescript, java, rust
+  testing_depth: unit       # none, unit, integration, e2e
+  documentation_level: standard  # minimal, standard, comprehensive
+  dependency_style: standard     # minimal (stdlib), standard, batteries
+  error_handling: structured     # simple, structured, comprehensive
+  containerized: true       # Generate Dockerfile
+  include_ci: true          # Generate CI/CD pipelines
+  include_iac: true         # Generate Terraform/K8s manifests
+
+# Technology stack
+stack:
+  cloud: aws
+  compute: kubernetes
+  database: postgres
+  cache: redis
+  message_queue: kafka      # Only needed if stateless: true
+  iac: terraform
+  gitops: argocd
+  ci: github-actions
+  monitoring: prometheus
+  logging: stdout
+
+# Agent customization
+agents:
+  architect:
+    output: architecture.md
     depends_on: []
 
-  tech:
-    prompt: |
-      You are a Tech Lead. Create technical requirements.
-      Write your output to {output_path}.
-    output: technical-requirements.md
-    depends_on: [design]
+  qa:
+    output: test-plan.md
+    depends_on: [architect]
+
+  security:
+    output: security-assessment.md
+    depends_on: [architect]
+
+  implementer:
+    output: code/.complete
+    depends_on: [architect, security]
+
+  verifier:
+    output: code/.verified
+    depends_on: [implementer, qa]
 ```
+
+### Personas
+
+| Persona | Use Case | Key Characteristics |
+|---------|----------|---------------------|
+| `minimal` | MVP, prototype | Ship fast, simple code, skip observability |
+| `balanced` | Growing product | Essential quality, maintainable code |
+| `production` | Enterprise | Comprehensive testing, security, observability |
 
 ### Prompt Variables
 
@@ -235,14 +274,26 @@ agents:
 ### Parallel vs Sequential
 
 **Parallel mode (default):**
-- All agents start simultaneously
-- Agents read whatever files exist at runtime
-- Faster but dependencies may not be available
+- Agents run concurrently within dependency levels
+- Level 0: `architect` (no dependencies)
+- Level 1: `qa`, `security` (both depend only on architect, run in parallel)
+- Level 2: `implementer` (depends on architect, security)
+- Level 3: `verifier` (depends on implementer, qa)
+- Each level must complete before the next starts
+- Faster than sequential while respecting dependencies
 
 **Sequential mode (`--sequential`):**
-- Agents run in dependency order (topological sort)
-- Each agent waits for dependencies to complete
-- Slower but dependencies are guaranteed
+- Agents run in strict dependency order (topological sort)
+- Each agent waits for the previous to complete
+- Slowest but most predictable
+
+**Resume mode (`--resume`):**
+- Skips agents whose outputs are up-to-date
+- Detects changes via content hashing (SHA-256):
+  - Input files changed?
+  - Configuration (persona, stack, preferences) changed?
+  - Dependency outputs changed?
+- Use `--force` to override and regenerate all
 
 ## Development
 
@@ -286,13 +337,19 @@ make help
 pm-agent-workflow/
 ├── cmd/pm-agents/           # Entry point
 ├── internal/
-│   ├── agent/               # Agent lifecycle management
+│   ├── agent/               # Agent lifecycle management and orchestration
+│   │   ├── manager.go       # Agent spawning, health checks, task dispatch
+│   │   └── orchestrator.go  # Interface abstraction for testability
 │   ├── api/                 # AgentAPI HTTP client
 │   ├── cmd/                 # CLI commands
-│   └── config/              # Configuration loading
+│   ├── config/              # Configuration loading
+│   ├── input/               # Input file discovery (single file or directory)
+│   ├── prompt/              # Prompt template loading and rendering
+│   ├── state/               # Resume state management (content hashing)
+│   └── types/               # Shared type definitions (TechStack, Preferences)
 ├── .github/workflows/       # CI/CD pipelines
 ├── docs/                    # Documentation
-├── examples/                # Sample PRDs
+├── examples/                # Sample PRDs and config files
 ├── .goreleaser.yml          # Release configuration
 ├── .golangci.yml            # Linter configuration
 └── Makefile                 # Build automation
@@ -309,9 +366,9 @@ pm-agent-workflow/
 ## Limitations (v1)
 
 - No web dashboard (CLI only)
-- No database persistence
-- No approval gates
-- No session resume after crash
+- No database persistence (state stored in JSON files)
+- No approval gates (agents run autonomously)
+- No mid-session resume (crash = restart from beginning)
 - macOS/Linux only (no Windows)
 - Generated code may require minor fixes (verified to compile with `go build`)
 

@@ -47,7 +47,8 @@ pm-agent-workflow/
 │   └── main.go              # Entry point
 ├── internal/
 │   ├── agent/
-│   │   └── manager.go       # Agent lifecycle management
+│   │   ├── manager.go       # Agent lifecycle management
+│   │   └── orchestrator.go  # Interface abstraction for testability
 │   ├── api/
 │   │   └── client.go        # AgentAPI HTTP client
 │   ├── cmd/
@@ -59,13 +60,22 @@ pm-agent-workflow/
 │   │   ├── stop.go          # Stop agents
 │   │   ├── init.go          # Initialize config
 │   │   └── agents.go        # List/show agents
-│   └── config/
-│       └── config.go        # YAML config loading
+│   ├── config/
+│   │   └── config.go        # YAML config loading
+│   ├── input/
+│   │   └── discover.go      # Input file discovery (file or directory)
+│   ├── prompt/
+│   │   ├── loader.go        # Prompt template loading
+│   │   └── templates/       # Embedded prompt templates
+│   ├── state/
+│   │   └── resume.go        # Resume state management (content hashing)
+│   └── types/
+│       └── types.go         # Shared type definitions (TechStack, Preferences)
 ├── .github/workflows/
 │   ├── build.yml            # CI pipeline
 │   └── release.yml          # Release automation
 ├── docs/                    # Documentation
-├── examples/                # Sample PRDs
+├── examples/                # Sample PRDs and config files
 ├── .goreleaser.yml          # Release configuration
 ├── .golangci.yml            # Linter configuration
 ├── Makefile                 # Build automation
@@ -133,6 +143,9 @@ YAML-based configuration with:
 - Default agent prompts (5 agents with clear boundaries)
 - Dependency ordering
 - Environment variable overrides (`PM_AGENTS_OUTPUT_DIR`, `PM_AGENTS_TIMEOUT`)
+- **Persona system**: minimal, balanced, production
+- **Architecture preferences**: API style, testing depth, documentation level
+- **Technology stack**: Cloud, compute, database, cache, messaging
 
 **Agent Structure (Refactored):**
 
@@ -146,7 +159,42 @@ YAML-based configuration with:
 - Single source of truth for code (implementer)
 - Clear contracts between agents
 
-### 4. CLI Commands (`internal/cmd/`)
+### 4. Shared Types (`internal/types/types.go`)
+
+Canonical type definitions shared across packages:
+- `TechStack` - Technology stack preferences (cloud, compute, DB, etc.)
+- `ArchitecturePreferences` - Architectural style options (stateless, API style, testing depth)
+- Type aliases in `config` and `prompt` packages avoid duplication
+
+### 5. Resume State Manager (`internal/state/resume.go`)
+
+Content-hash based resume detection:
+- Tracks SHA-256 hashes of inputs, config, and dependency outputs
+- Determines if agent output is up-to-date or needs regeneration
+- State persisted to `.pm-agents/.resume-state.json`
+
+**Change detection checks:**
+1. Input files changed?
+2. Configuration (persona, stack, preferences) changed?
+3. Dependency agent outputs changed?
+4. Output file modified externally?
+
+### 6. Orchestrator Interface (`internal/agent/orchestrator.go`)
+
+Abstraction for agent orchestration (enables testing and extensibility):
+```go
+type Orchestrator interface {
+    RunAgent(ctx context.Context, name string) Result
+    TopologicalSort(agents []string) []string
+    GetDependencyLevels(agents []string) [][]string
+    ExpandWithDependencies(agents []string) []string
+    GetTransitiveDependencies(agentName string) []string
+    StopAll()
+    GetRunningAgents() []*RunningAgent
+}
+```
+
+### 7. CLI Commands (`internal/cmd/`)
 
 | Command | Description |
 |---------|-------------|
@@ -182,22 +230,52 @@ YAML-based configuration with:
 
 ## Parallel vs Sequential Mode
 
-**Parallel (default):**
-- All agents spawn simultaneously
-- Each reads whatever files exist
-- Fast but no dependency guarantees
+**Parallel (default) - Dependency-Level Parallelism:**
+- Agents grouped by dependency level
+- All agents within a level run concurrently
+- Each level must complete before next level starts
+- Example: Level 0 (architect) → Level 1 (qa, security in parallel) → Level 2 (implementer) → Level 3 (verifier)
+- Faster than sequential while respecting dependencies
 
 **Sequential (`--sequential`):**
 - Topological sort based on `depends_on`
-- Each agent waits for dependencies
-- Slower but guaranteed order
+- Each agent waits for previous agent
+- Slowest but most predictable
+
+**Resume Mode (`--resume`):**
+- Skips agents whose outputs are up-to-date
+- Uses content hashing (SHA-256) to detect changes
+- Tracks: input files, config, dependency outputs
+- Use `--force` to regenerate all
 
 ## State Management
 
+**Runtime State:**
 - State file: `/tmp/pm-agents-state.json`
 - Contains: `{"agent_name": port_number, ...}`
 - Used by `status`, `logs`, `message`, `stop` commands
 - Cleared on run completion
+
+**Resume State:**
+- State file: `.pm-agents/.resume-state.json` (in output dir)
+- Contains: content hashes for inputs, config, and agent outputs
+- Persists across runs to enable `--resume` mode
+- Structure:
+  ```json
+  {
+    "input_hash": "sha256...",
+    "config_hash": "sha256...",
+    "agent_outputs": {
+      "architect": {
+        "output_path": "outputs/architecture.md",
+        "output_hash": "sha256...",
+        "input_hash_at_generation": "sha256...",
+        "config_hash_at_generation": "sha256...",
+        "dependency_hashes": {}
+      }
+    }
+  }
+  ```
 
 ## CI/CD Pipeline
 

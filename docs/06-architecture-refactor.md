@@ -198,3 +198,106 @@ pm-agents run prd.md --sequential
 pm-agents run prd.md --iterate --max-rounds 3
 # Runs multiple rounds until verifier passes
 ```
+
+---
+
+## Architecture Improvements (Post-Refactor)
+
+The following improvements were made to enhance maintainability and extensibility:
+
+### 1. Dependency-Level Parallelism
+
+**Problem:** Original parallel mode ran all agents simultaneously, ignoring dependencies.
+
+**Solution:** Agents now run in dependency levels:
+```
+Level 0: architect (no deps)
+Level 1: qa, security (parallel, both depend on architect)
+Level 2: implementer (depends on architect, security)
+Level 3: verifier (depends on implementer, qa)
+```
+
+Each level completes before the next starts. Faster than sequential while respecting dependencies.
+
+### 2. Shared Types Package
+
+**Problem:** Type duplication between `config` and `prompt` packages.
+
+**Solution:** Canonical types in `internal/types/types.go`:
+- `TechStack` - Technology stack preferences
+- `ArchitecturePreferences` - Architectural style options
+- Type aliases in `config` and `prompt` packages reference the shared types
+
+### 3. Content-Hash Resume Mode
+
+**Problem:** Simple file mtime comparison for resume was unreliable.
+
+**Solution:** SHA-256 content hashing (`internal/state/resume.go`):
+- Hash all input files
+- Hash configuration (persona, stack, preferences)
+- Hash dependency outputs at generation time
+- Detect changes by comparing current hashes to stored hashes
+
+### 4. Orchestrator Interface
+
+**Problem:** Tight coupling between CLI and agent manager made testing difficult.
+
+**Solution:** `Orchestrator` interface (`internal/agent/orchestrator.go`):
+```go
+type Orchestrator interface {
+    RunAgent(ctx context.Context, name string) Result
+    TopologicalSort(agents []string) []string
+    GetDependencyLevels(agents []string) [][]string
+    ExpandWithDependencies(agents []string) []string
+    GetTransitiveDependencies(agentName string) []string
+    StopAll()
+    GetRunningAgents() []*RunningAgent
+}
+```
+
+Enables:
+- Unit testing with mock implementations
+- Alternative implementations (e.g., remote agent execution)
+- Dependency injection
+
+### 5. Transitive Dependency Resolution
+
+**Problem:** Running a subset of agents (e.g., `--agents verifier`) didn't auto-include dependencies.
+
+**Solution:** `ExpandWithDependencies()` method:
+- Takes requested agents
+- Expands to include all transitive dependencies
+- Returns in dependency order
+
+Example: `--agents verifier` expands to `architect → qa → security → implementer → verifier`
+
+### 6. Configurable Preferences
+
+**Problem:** One-size-fits-all prompts didn't suit different user needs.
+
+**Solution:** Extensive configuration options:
+
+```yaml
+persona: balanced  # minimal, balanced, production
+
+preferences:
+  stateless: false
+  api_style: rest       # rest, graphql, grpc
+  language: go          # go, python, typescript, java, rust
+  testing_depth: unit   # none, unit, integration, e2e
+  documentation_level: standard
+  dependency_style: standard
+  error_handling: structured
+  containerized: true
+  include_ci: true
+  include_iac: true
+
+stack:
+  cloud: aws
+  compute: kubernetes
+  database: postgres
+  cache: redis
+  # ... more options
+```
+
+Prompts adapt based on these settings.
