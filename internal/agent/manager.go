@@ -81,16 +81,25 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 	outputPath := filepath.Join(m.config.OutputDir, agentCfg.Output)
 	absOutputPath, _ := filepath.Abs(outputPath)
 
-	// Resume mode: skip if output already exists
+	// Resume mode: skip if output already exists AND PRD hasn't changed
 	if m.config.ResumeMode {
-		if _, err := os.Stat(absOutputPath); err == nil {
-			if m.verbose {
-				fmt.Printf("[DEBUG] Skipping agent %s - output already exists: %s\n", name, absOutputPath)
-			}
-			return Result{
-				Agent:      name,
-				OutputPath: absOutputPath,
-				Duration:   time.Since(start),
+		if outputInfo, err := os.Stat(absOutputPath); err == nil {
+			// Check if PRD was modified after the output was generated
+			prdInfo, prdErr := os.Stat(m.prdPath)
+			if prdErr == nil && prdInfo.ModTime().After(outputInfo.ModTime()) {
+				if m.verbose {
+					fmt.Printf("[DEBUG] PRD modified after output - regenerating %s\n", name)
+				}
+				// PRD is newer, don't skip - regenerate
+			} else {
+				if m.verbose {
+					fmt.Printf("[DEBUG] Skipping agent %s - output up-to-date: %s\n", name, absOutputPath)
+				}
+				return Result{
+					Agent:      name,
+					OutputPath: absOutputPath,
+					Duration:   time.Since(start),
+				}
 			}
 		}
 	}
@@ -104,7 +113,12 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 
 	// Build the prompt using template loader
 	absOutputDir, _ := filepath.Abs(m.config.OutputDir)
-	existingFiles := m.listExistingFiles(absOutputDir)
+
+	// In force mode, don't pass existing files (treat as fresh generation)
+	var existingFiles []string
+	if !m.config.ForceMode {
+		existingFiles = m.listExistingFiles(absOutputDir)
+	}
 
 	promptVars := prompt.Variables{
 		PRDPath:       m.prdPath,
@@ -112,7 +126,7 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 		OutputPath:    absOutputPath,
 		AgentName:     name,
 		ExistingFiles: existingFiles,
-		HasExisting:   len(existingFiles) > 0,
+		HasExisting:   len(existingFiles) > 0 && !m.config.ForceMode,
 	}
 
 	renderedPrompt, err := m.promptLoader.LoadAndRender(name, agentCfg.Prompt, agentCfg.PromptFile, promptVars)

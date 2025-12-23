@@ -22,6 +22,7 @@ var (
 	configPath     string
 	timeoutSeconds int
 	resumeMode     bool
+	forceMode      bool
 )
 
 var runCmd = &cobra.Command{
@@ -49,7 +50,8 @@ func init() {
 	runCmd.Flags().BoolVarP(&sequential, "sequential", "s", false, "run agents in dependency order")
 	runCmd.Flags().StringVarP(&configPath, "config", "c", "", "config file path")
 	runCmd.Flags().IntVarP(&timeoutSeconds, "timeout", "t", 0, "timeout per agent in seconds (0=infinite, polls until completion)")
-	runCmd.Flags().BoolVarP(&resumeMode, "resume", "r", false, "skip agents whose outputs already exist")
+	runCmd.Flags().BoolVarP(&resumeMode, "resume", "r", false, "skip agents whose outputs are up-to-date with PRD")
+	runCmd.Flags().BoolVarP(&forceMode, "force", "f", false, "force regeneration, ignore existing outputs")
 }
 
 func runCommand(cmd *cobra.Command, args []string) error {
@@ -78,6 +80,12 @@ func runCommand(cmd *cobra.Command, args []string) error {
 	}
 	cfg.Timeout = timeoutSeconds
 	cfg.ResumeMode = resumeMode
+	cfg.ForceMode = forceMode
+
+	// Force mode overrides resume mode
+	if cfg.ForceMode {
+		cfg.ResumeMode = false
+	}
 
 	// Ensure output directory exists
 	if err := os.MkdirAll(cfg.OutputDir, 0755); err != nil {
