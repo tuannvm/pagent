@@ -15,6 +15,62 @@ The primary document is: {{.PRDPath}}
 - Architecture: {{.OutputDir}}/architecture.md
 - Output: {{.OutputPath}}
 - Persona: {{.Persona}}
+
+## Technology Stack Security Context
+
+Review security for this specific stack:
+
+| Component | Technology | Security Focus |
+|-----------|------------|----------------|
+| **Cloud** | {{.Stack.Cloud | upper}} | IAM policies, security groups, KMS |
+| **Compute** | {{.Stack.Compute | upper}} | Pod security, RBAC, network policies |
+| **Database** | {{.Stack.Database}} | Authentication, encryption at rest, backup |
+| **Cache** | {{.Stack.Cache}} | AUTH, TLS, no sensitive data in cache keys |
+| **Message Queue** | {{.Stack.MessageQueue}} | ACLs, encryption, topic permissions |
+| **GitOps** | {{.Stack.GitOps}} | RBAC, sealed secrets, audit logging |
+
+Tailor all security recommendations to this stack.
+
+{{if .IsStateless}}
+## ⚡ STATELESS ARCHITECTURE SECURITY
+
+Architecture uses **stateless/event-driven** patterns. Address these specific concerns:
+
+### Event Security
+- **Event payload validation** - Validate all fields before processing
+- **Event signing** - Sign events to prevent tampering (HMAC-SHA256)
+- **Event encryption** - Encrypt sensitive data in payloads
+- **Replay protection** - Idempotency keys prevent replay attacks
+- **Event authorization** - Verify producer is authorized to emit event
+
+### Message Queue Security ({{.Stack.MessageQueue}})
+- Topic-level ACLs (producer/consumer permissions)
+- TLS for in-transit encryption
+- Authentication (SASL/SCRAM or mTLS)
+- No sensitive data in topic names
+
+### Cache Security ({{.Stack.Cache}})
+- AUTH enabled, strong password
+- TLS for connections
+- Key expiration (TTL) for session data
+- No PII in cache keys (use hashed identifiers)
+- Flush strategy for compromised sessions
+
+### Object Storage Security ({{.Stack.DataLake}})
+- Server-side encryption (SSE-S3 or SSE-KMS)
+- Bucket policies (least privilege)
+- No public access
+- Audit logging on sensitive buckets
+- Versioning for compliance
+
+### Idempotency Security
+- Idempotency keys should be:
+  - Client-generated UUIDs (not sequential)
+  - Scoped to user/tenant
+  - Time-limited (expire after processing window)
+  - Stored securely ({{.Stack.Cache}} with TTL)
+{{end}}
+
 {{if .HasExisting}}
 ## INCREMENTAL UPDATE MODE
 
@@ -156,7 +212,12 @@ Include:
 - Security requirements checklist
 - Authentication/Authorization review
 - Data protection requirements (encryption, PII handling)
-- API security (rate limiting, input validation)
+{{if .IsStateless}}- Event security (signing, encryption, replay protection)
+- Message queue security (ACLs, TLS, authentication)
+- Cache security (AUTH, TTL, key patterns)
+- Object storage security (encryption, bucket policies)
+{{else}}- Database security (authentication, encryption)
+{{end}}- API security (rate limiting, input validation)
 - Risk assessment with severity levels
 - Required mitigations (must be addressed by implementer)
 

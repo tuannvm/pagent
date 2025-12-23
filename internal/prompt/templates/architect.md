@@ -14,6 +14,78 @@ The primary document is: {{.PRDPath}}
 {{end}}
 - Output: {{.OutputPath}}
 - Persona: {{.Persona}}
+
+## Project Preferences
+
+| Preference | Value |
+|------------|-------|
+| **Language** | {{.Preferences.Language}} |
+| **API Style** | {{if .Preferences.APIStyle}}{{.Preferences.APIStyle}}{{else}}rest{{end}} |
+| **Architecture** | {{if .IsStateless}}stateless/event-driven{{else}}database-backed{{end}} |
+| **Testing** | {{if .Preferences.TestingDepth}}{{.Preferences.TestingDepth}}{{else}}unit{{end}} |
+| **Documentation** | {{if .Preferences.DocumentationLevel}}{{.Preferences.DocumentationLevel}}{{else}}standard{{end}} |
+| **Dependencies** | {{if .Preferences.DependencyStyle}}{{.Preferences.DependencyStyle}}{{else}}standard{{end}} |
+| **Error Handling** | {{if .Preferences.ErrorHandling}}{{.Preferences.ErrorHandling}}{{else}}structured{{end}} |
+| **Containerized** | {{if .Preferences.Containerized}}yes{{else}}no{{end}} |
+| **Include CI/CD** | {{if .Preferences.IncludeCI}}yes{{else}}no{{end}} |
+| **Include IaC** | {{if .Preferences.IncludeIaC}}yes{{else}}no{{end}} |
+
+Design the architecture according to these preferences.
+
+## Technology Stack{{if .Stack.Cloud}} (USE THESE){{end}}
+
+You MUST design for this specific technology stack:
+
+| Category | Technology |
+|----------|------------|
+| **Cloud** | {{.Stack.Cloud | upper}} |
+| **Compute** | {{.Stack.Compute | upper}} |
+| **Database** | {{.Stack.Database}} |
+| **Cache** | {{.Stack.Cache}} |
+| **Message Queue** | {{.Stack.MessageQueue}} |
+| **IaC** | {{.Stack.IaC}} |
+| **GitOps** | {{.Stack.GitOps}} |
+| **CI/CD** | {{.Stack.CI}} |
+| **Data Lake** | {{.Stack.DataLake}} |
+| **Query Engine** | {{.Stack.QueryEngine}} |
+| **Monitoring** | {{.Stack.Monitoring}} |
+| **Alerting** | {{.Stack.Alerting}} |
+| **Logging** | {{.Stack.Logging}} |
+| **Chat** | {{.Stack.Chat}} |
+{{if .Stack.Additional}}| **Additional** | {{join .Stack.Additional ", "}} |{{end}}
+
+Design all components to integrate with this stack. Do NOT suggest alternatives unless the PRD specifically requires something different.
+
+{{if .IsStateless}}
+## ⚡ STATELESS ARCHITECTURE PREFERRED
+
+You MUST design for **stateless** architecture wherever possible:
+
+### Guiding Principles
+1. **Avoid Traditional Databases** - No RDBMS or document stores for application state
+2. **Event-Driven Over CRUD** - Use message queues ({{.Stack.MessageQueue}}) for state propagation
+3. **External State Stores** - Use {{.Stack.Cache}} for session/ephemeral state, {{.Stack.DataLake}} for persistence
+4. **Idempotent Operations** - All operations should be safely repeatable
+5. **Pass State Through Events** - Include all necessary context in event payloads
+
+### Stateless Patterns to Use
+| Instead of | Use |
+|------------|-----|
+| Database for app state | {{.Stack.MessageQueue}} events + {{.Stack.DataLake}} for audit/replay |
+| Session storage in DB | {{.Stack.Cache}} with TTL |
+| Transactional CRUD | Event sourcing with idempotency keys |
+| Polling database | Subscribe to {{.Stack.MessageQueue}} topics |
+| Request/response for async | Fire-and-forget events with correlation IDs |
+
+### When Database is Unavoidable
+Only use {{.Stack.Database}} for:
+- Read-heavy reference data that changes infrequently
+- Audit logs / compliance requirements
+- Search indexes (consider {{.Stack.Search}} instead)
+
+Even then, treat it as a **read replica** populated by events, not the source of truth.
+{{end}}
+
 {{if .HasExisting}}
 ## CHANGE DETECTION MODE
 
@@ -152,16 +224,37 @@ Include:
 - Technology stack decisions with rationale
 
 ### 2. API Design
+{{if .IsGraphQL}}
+- GraphQL schema definition
+- Query and mutation definitions
+- Resolver patterns
+- Authentication flow (via context)
+- Error response format
+{{else if .IsGRPC}}
+- Protocol Buffer definitions (.proto files)
+- Service and RPC method definitions
+- Message types
+- Authentication flow (via metadata/interceptors)
+- Error codes and status handling
+{{else}}
 - RESTful API endpoints (OpenAPI 3.0 format)
 - Request/response schemas
 - Authentication flow
 - Error response format
+{{end}}
 
 ### 3. Data Models
+{{if .IsStateless}}
+- Event schema definitions (what events flow through the system)
+- State store schemas ({{.Stack.Cache}} key patterns, {{.Stack.DataLake}} object layouts)
+- Idempotency key strategies
+- If database is required: read model schemas (treat as projections from events)
+{{else}}
 - Entity relationship diagram (mermaid)
 - Complete schema definitions with field types
 - Database table designs (PostgreSQL)
 - Indexes and constraints
+{{end}}
 
 ### 4. Component Design
 - Service layer responsibilities

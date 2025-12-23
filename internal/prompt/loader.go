@@ -8,10 +8,18 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/tuannvm/pm-agent-workflow/internal/types"
 )
 
 //go:embed templates/*.md
 var embeddedTemplates embed.FS
+
+// Type aliases for the shared types - used in prompt templates
+type (
+	TechStack               = types.TechStack
+	ArchitecturePreferences = types.ArchitecturePreferences
+)
 
 // Variables holds the template variables for prompt rendering
 type Variables struct {
@@ -22,9 +30,11 @@ type Variables struct {
 	OutputDir     string
 	OutputPath    string
 	AgentName     string
-	ExistingFiles []string // List of files already in OutputDir
-	HasExisting   bool     // True if there are existing outputs to consider
-	Persona       string   // Implementation style: minimal, balanced, production
+	ExistingFiles []string                // List of files already in OutputDir
+	HasExisting   bool                    // True if there are existing outputs to consider
+	Persona       string                  // Implementation style: minimal, balanced, production
+	Stack         TechStack               // Technology stack preferences
+	Preferences   ArchitecturePreferences // Architectural style preferences
 	// Custom allows arbitrary key-value pairs
 	Custom map[string]string
 }
@@ -42,6 +52,61 @@ func (v Variables) IsBalanced() bool {
 // IsProduction returns true if persona is "production"
 func (v Variables) IsProduction() bool {
 	return v.Persona == "production"
+}
+
+// IsStateless returns true if stateless architecture is preferred
+func (v Variables) IsStateless() bool {
+	return v.Preferences.Stateless
+}
+
+// IsREST returns true if REST API style is preferred
+func (v Variables) IsREST() bool {
+	return v.Preferences.APIStyle == "" || v.Preferences.APIStyle == "rest"
+}
+
+// IsGraphQL returns true if GraphQL API style is preferred
+func (v Variables) IsGraphQL() bool {
+	return v.Preferences.APIStyle == "graphql"
+}
+
+// IsGRPC returns true if gRPC API style is preferred
+func (v Variables) IsGRPC() bool {
+	return v.Preferences.APIStyle == "grpc"
+}
+
+// WantsTests returns true if testing is enabled (any level)
+func (v Variables) WantsTests() bool {
+	return v.Preferences.TestingDepth != "none"
+}
+
+// WantsIntegrationTests returns true if integration tests are wanted
+func (v Variables) WantsIntegrationTests() bool {
+	return v.Preferences.TestingDepth == "integration" || v.Preferences.TestingDepth == "e2e"
+}
+
+// WantsE2ETests returns true if e2e tests are wanted
+func (v Variables) WantsE2ETests() bool {
+	return v.Preferences.TestingDepth == "e2e"
+}
+
+// WantsMinimalDeps returns true if minimal dependencies are preferred
+func (v Variables) WantsMinimalDeps() bool {
+	return v.Preferences.DependencyStyle == "minimal"
+}
+
+// WantsBatteries returns true if feature-rich dependencies are preferred
+func (v Variables) WantsBatteries() bool {
+	return v.Preferences.DependencyStyle == "batteries"
+}
+
+// WantsComprehensiveDocs returns true if comprehensive documentation is wanted
+func (v Variables) WantsComprehensiveDocs() bool {
+	return v.Preferences.DocumentationLevel == "comprehensive"
+}
+
+// WantsMinimalDocs returns true if minimal documentation is wanted
+func (v Variables) WantsMinimalDocs() bool {
+	return v.Preferences.DocumentationLevel == "minimal"
 }
 
 // Loader handles loading and rendering prompt templates

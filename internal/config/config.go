@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/tuannvm/pm-agent-workflow/internal/types"
 	"gopkg.in/yaml.v3"
 )
 
@@ -19,14 +20,23 @@ const (
 // ValidPersonas lists all valid persona values
 var ValidPersonas = []string{PersonaMinimal, PersonaBalanced, PersonaProduction}
 
+// Type aliases for backward compatibility and convenience
+// These reference the canonical types in the types package
+type (
+	TechStack               = types.TechStack
+	ArchitecturePreferences = types.ArchitecturePreferences
+)
+
 // Config represents the pm-agents configuration
 type Config struct {
-	OutputDir  string                 `yaml:"output_dir"`
-	Timeout    int                    `yaml:"timeout"`
-	Persona    string                 `yaml:"persona"`   // Implementation style: minimal, balanced, production
-	ResumeMode bool                   `yaml:"-"`         // Set via CLI flag, not config file
-	ForceMode  bool                   `yaml:"-"`         // Set via CLI flag, not config file
-	Agents     map[string]AgentConfig `yaml:"agents"`
+	OutputDir   string                  `yaml:"output_dir"`
+	Timeout     int                     `yaml:"timeout"`
+	Persona     string                  `yaml:"persona"`     // Implementation style: minimal, balanced, production
+	Stack       TechStack               `yaml:"stack"`       // Technology stack preferences
+	Preferences ArchitecturePreferences `yaml:"preferences"` // Architectural style preferences
+	ResumeMode  bool                    `yaml:"-"`           // Set via CLI flag, not config file
+	ForceMode   bool                    `yaml:"-"`           // Set via CLI flag, not config file
+	Agents      map[string]AgentConfig  `yaml:"agents"`
 }
 
 // IsValidPersona checks if a persona string is valid
@@ -118,14 +128,28 @@ func (c *Config) ApplyEnvOverrides() {
 	}
 }
 
+// DefaultPreferences returns the default architecture preferences
+// These are neutral defaults that work for most projects
+func DefaultPreferences() ArchitecturePreferences {
+	return types.DefaultPreferences()
+}
+
+// DefaultStack returns the default technology stack preferences
+// These are widely-used, well-documented technologies
+func DefaultStack() TechStack {
+	return types.DefaultStack()
+}
+
 // Default returns the default configuration
 // Prompts are loaded from embedded templates (internal/prompt/templates/)
 // Users can override by specifying prompt_file or inline prompt in config
 func Default() *Config {
 	return &Config{
-		OutputDir: "./outputs",
-		Timeout:   0,                // 0 = no timeout (poll until completion). Set via --timeout for safety net.
-		Persona:   PersonaBalanced,  // Default to pragmatic middle-ground
+		OutputDir:   "./outputs",
+		Timeout:     0,                    // 0 = no timeout (poll until completion). Set via --timeout for safety net.
+		Persona:     PersonaBalanced,      // Default to pragmatic middle-ground
+		Stack:       DefaultStack(),       // Default technology stack
+		Preferences: DefaultPreferences(), // Default architecture preferences
 		Agents: map[string]AgentConfig{
 			// SPECIFICATION PHASE
 			"architect": {
