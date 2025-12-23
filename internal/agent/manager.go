@@ -7,13 +7,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/tuannvm/pm-agent-workflow/internal/api"
 	"github.com/tuannvm/pm-agent-workflow/internal/config"
+	"github.com/tuannvm/pm-agent-workflow/internal/prompt"
 )
 
 const (
@@ -45,22 +45,24 @@ type RunningAgent struct {
 
 // Manager manages agent lifecycle
 type Manager struct {
-	config    *config.Config
-	prdPath   string
-	verbose   bool
-	agents    map[string]*RunningAgent
-	portAlloc int
-	mu        sync.Mutex
+	config       *config.Config
+	prdPath      string
+	verbose      bool
+	agents       map[string]*RunningAgent
+	portAlloc    int
+	mu           sync.Mutex
+	promptLoader *prompt.Loader
 }
 
 // NewManager creates a new agent manager
 func NewManager(cfg *config.Config, prdPath string, verbose bool) *Manager {
 	return &Manager{
-		config:    cfg,
-		prdPath:   prdPath,
-		verbose:   verbose,
-		agents:    make(map[string]*RunningAgent),
-		portAlloc: basePort,
+		config:       cfg,
+		prdPath:      prdPath,
+		verbose:      verbose,
+		agents:       make(map[string]*RunningAgent),
+		portAlloc:    basePort,
+		promptLoader: prompt.NewLoader("prompts"), // Load from ./prompts if exists
 	}
 }
 
@@ -85,9 +87,23 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 		fmt.Printf("[DEBUG] Starting agent %s on port %d\n", name, port)
 	}
 
-	// Build the prompt with substitutions
-	prompt := strings.ReplaceAll(agentCfg.Prompt, "{prd_path}", m.prdPath)
-	prompt = strings.ReplaceAll(prompt, "{output_path}", absOutputPath)
+	// Build the prompt using template loader
+	absOutputDir, _ := filepath.Abs(m.config.OutputDir)
+	promptVars := prompt.Variables{
+		PRDPath:    m.prdPath,
+		OutputDir:  absOutputDir,
+		OutputPath: absOutputPath,
+		AgentName:  name,
+	}
+
+	renderedPrompt, err := m.promptLoader.LoadAndRender(name, agentCfg.Prompt, agentCfg.PromptFile, promptVars)
+	if err != nil {
+		return Result{
+			Agent:    name,
+			Error:    fmt.Errorf("failed to load prompt: %w", err),
+			Duration: time.Since(start),
+		}
+	}
 
 	// Start AgentAPI process
 	agent, err := m.spawnAgent(ctx, name, port)
@@ -139,7 +155,7 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 	}
 
 	// Send the task prompt
-	if err := agent.Client.SendMessage(prompt, "user"); err != nil {
+	if err := agent.Client.SendMessage(renderedPrompt, "user"); err != nil {
 		return Result{
 			Agent:    name,
 			Error:    fmt.Errorf("failed to send task: %w", err),
