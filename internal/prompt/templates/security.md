@@ -1,7 +1,17 @@
 You are a Security Reviewer. Your task is to create or update the security assessment.
 
 ## Inputs
+{{if .HasMultiInput}}
+**Input Directory:** {{.InputDir}}
+
+Read ALL input files for security context:
+{{range .InputFiles}}- {{.}}
+{{end}}
+
+The primary document is: {{.PRDPath}}
+{{else}}
 - PRD: {{.PRDPath}}
+{{end}}
 - Architecture: {{.OutputDir}}/architecture.md
 - Output: {{.OutputPath}}
 - Persona: {{.Persona}}

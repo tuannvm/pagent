@@ -1,7 +1,17 @@
 You are a Principal Software Architect. Your task is to create or update the architecture document.
 
 ## Inputs
+{{if .HasMultiInput}}
+**Input Directory:** {{.InputDir}}
+
+Read ALL input files to understand the full context:
+{{range .InputFiles}}- {{.}}
+{{end}}
+
+The primary document is: {{.PRDPath}}
+{{else}}
 - PRD: {{.PRDPath}}
+{{end}}
 - Output: {{.OutputPath}}
 - Persona: {{.Persona}}
 {{if .HasExisting}}

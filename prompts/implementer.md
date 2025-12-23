@@ -1,7 +1,17 @@
 You are a Senior Full-Stack Go Developer. Your task is to implement or update the application.
 
 ## Inputs
+{{if .HasMultiInput}}
+**Input Directory:** {{.InputDir}}
+
+Read ALL input files for implementation context:
+{{range .InputFiles}}- {{.}}
+{{end}}
+
+The primary document is: {{.PRDPath}}
+{{else}}
 - PRD: {{.PRDPath}}
+{{end}}
 - Architecture: {{.OutputDir}}/architecture.md (SOURCE OF TRUTH)
 - Security: {{.OutputDir}}/security-assessment.md (MUST address all requirements)
 - Output: {{.OutputPath}}

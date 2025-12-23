@@ -46,7 +46,9 @@ type RunningAgent struct {
 // Manager manages agent lifecycle
 type Manager struct {
 	config       *config.Config
-	prdPath      string
+	prdPath      string   // Primary input file (backward compatible)
+	inputFiles   []string // All input files
+	inputDir     string   // Input directory (empty if single file)
 	verbose      bool
 	agents       map[string]*RunningAgent
 	portAlloc    int
@@ -59,10 +61,25 @@ func NewManager(cfg *config.Config, prdPath string, verbose bool) *Manager {
 	return &Manager{
 		config:       cfg,
 		prdPath:      prdPath,
+		inputFiles:   []string{prdPath}, // Single file as default
 		verbose:      verbose,
 		agents:       make(map[string]*RunningAgent),
 		portAlloc:    basePort,
 		promptLoader: prompt.NewLoader("prompts"), // Load from ./prompts if exists
+	}
+}
+
+// NewManagerWithInputs creates a manager with multiple input files
+func NewManagerWithInputs(cfg *config.Config, primaryFile string, inputFiles []string, inputDir string, verbose bool) *Manager {
+	return &Manager{
+		config:       cfg,
+		prdPath:      primaryFile,
+		inputFiles:   inputFiles,
+		inputDir:     inputDir,
+		verbose:      verbose,
+		agents:       make(map[string]*RunningAgent),
+		portAlloc:    basePort,
+		promptLoader: prompt.NewLoader("prompts"),
 	}
 }
 
@@ -122,6 +139,9 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 
 	promptVars := prompt.Variables{
 		PRDPath:       m.prdPath,
+		InputFiles:    m.inputFiles,
+		InputDir:      m.inputDir,
+		HasMultiInput: len(m.inputFiles) > 1,
 		OutputDir:     absOutputDir,
 		OutputPath:    absOutputPath,
 		AgentName:     name,

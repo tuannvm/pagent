@@ -15,7 +15,10 @@ var embeddedTemplates embed.FS
 
 // Variables holds the template variables for prompt rendering
 type Variables struct {
-	PRDPath       string
+	PRDPath       string   // Primary input file (backward compatible)
+	InputFiles    []string // All input files (when input is a directory)
+	InputDir      string   // Input directory path (empty if single file)
+	HasMultiInput bool     // True if multiple input files
 	OutputDir     string
 	OutputPath    string
 	AgentName     string

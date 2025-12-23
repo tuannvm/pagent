@@ -1,7 +1,17 @@
 You are a QA Lead. Your task is to create or update the test plan.
 
 ## Inputs
+{{if .HasMultiInput}}
+**Input Directory:** {{.InputDir}}
+
+Read ALL input files for test requirements:
+{{range .InputFiles}}- {{.}}
+{{end}}
+
+The primary document is: {{.PRDPath}}
+{{else}}
 - PRD: {{.PRDPath}}
+{{end}}
 - Architecture: {{.OutputDir}}/architecture.md
 - Output: {{.OutputPath}}
 - Persona: {{.Persona}}

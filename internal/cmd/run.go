@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -13,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tuannvm/pm-agent-workflow/internal/agent"
 	"github.com/tuannvm/pm-agent-workflow/internal/config"
+	"github.com/tuannvm/pm-agent-workflow/internal/input"
 )
 
 var (
@@ -27,18 +27,21 @@ var (
 )
 
 var runCmd = &cobra.Command{
-	Use:   "run <prd-file>",
-	Short: "Run specialist agents on a PRD",
-	Long: `Run specialist agents to transform a PRD into deliverables.
+	Use:   "run <input>",
+	Short: "Run specialist agents on input files",
+	Long: `Run specialist agents to transform input documents into deliverables.
+
+Input can be a single file or a directory containing multiple files.
+Supported file types: .md, .yaml, .yml, .json, .txt
 
 By default, all agents run in parallel. Use --sequential to run
 agents in dependency order.
 
 Examples:
-  pm-agents run ./prd.md
-  pm-agents run ./prd.md --agents design,tech
-  pm-agents run ./prd.md --sequential
-  pm-agents run ./prd.md --output ./docs/`,
+  pm-agents run ./prd.md                    # Single PRD file
+  pm-agents run ./input/                    # Directory with multiple inputs
+  pm-agents run ./specs/ --agents architect # Only run architect
+  pm-agents run ./prd.md --persona minimal  # MVP implementation`,
 	Args: cobra.ExactArgs(1),
 	RunE: runCommand,
 }
@@ -57,16 +60,12 @@ func init() {
 }
 
 func runCommand(cmd *cobra.Command, args []string) error {
-	prdPath := args[0]
+	inputPath := args[0]
 
-	// Validate PRD file exists
-	absPath, err := filepath.Abs(prdPath)
+	// Discover input files (supports both single file and directory)
+	inp, err := input.Discover(inputPath)
 	if err != nil {
-		return fmt.Errorf("invalid path: %w", err)
-	}
-
-	if _, err := os.Stat(absPath); os.IsNotExist(err) {
-		return fmt.Errorf("PRD file not found: %s", absPath)
+		return fmt.Errorf("input error: %w", err)
 	}
 
 	// Load config
@@ -119,7 +118,13 @@ func runCommand(cmd *cobra.Command, args []string) error {
 	}
 
 	logInfo("Starting PM Agent Workflow")
-	logInfo("PRD: %s", absPath)
+	logInfo("%s", inp.Summary())
+	if inp.IsDirectory {
+		logVerbose("Input files:")
+		for _, f := range inp.RelativePaths() {
+			logVerbose("  - %s", f)
+		}
+	}
 	logInfo("Output: %s", cfg.OutputDir)
 	logInfo("Agents: %s", strings.Join(selectedAgents, ", "))
 	logInfo("Persona: %s", cfg.Persona)
@@ -138,8 +143,13 @@ func runCommand(cmd *cobra.Command, args []string) error {
 		cancel()
 	}()
 
-	// Create agent manager
-	manager := agent.NewManager(cfg, absPath, verbose)
+	// Create agent manager with input files
+	var manager *agent.Manager
+	if inp.IsDirectory {
+		manager = agent.NewManagerWithInputs(cfg, inp.PrimaryFile, inp.Files, inp.Path, verbose)
+	} else {
+		manager = agent.NewManager(cfg, inp.PrimaryFile, verbose)
+	}
 
 	// Run agents
 	var results []agent.Result
