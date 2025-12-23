@@ -127,6 +127,7 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 		AgentName:     name,
 		ExistingFiles: existingFiles,
 		HasExisting:   len(existingFiles) > 0 && !m.config.ForceMode,
+		Persona:       m.config.Persona,
 	}
 
 	renderedPrompt, err := m.promptLoader.LoadAndRender(name, agentCfg.Prompt, agentCfg.PromptFile, promptVars)

@@ -9,13 +9,34 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Persona constants define implementation styles
+const (
+	PersonaMinimal    = "minimal"    // MVP, prototype - ship fast, iterate later
+	PersonaBalanced   = "balanced"   // Pragmatic defaults - essential quality
+	PersonaProduction = "production" // Enterprise-grade - comprehensive, scalable
+)
+
+// ValidPersonas lists all valid persona values
+var ValidPersonas = []string{PersonaMinimal, PersonaBalanced, PersonaProduction}
+
 // Config represents the pm-agents configuration
 type Config struct {
 	OutputDir  string                 `yaml:"output_dir"`
 	Timeout    int                    `yaml:"timeout"`
-	ResumeMode bool                   `yaml:"-"` // Set via CLI flag, not config file
-	ForceMode  bool                   `yaml:"-"` // Set via CLI flag, not config file
+	Persona    string                 `yaml:"persona"`   // Implementation style: minimal, balanced, production
+	ResumeMode bool                   `yaml:"-"`         // Set via CLI flag, not config file
+	ForceMode  bool                   `yaml:"-"`         // Set via CLI flag, not config file
 	Agents     map[string]AgentConfig `yaml:"agents"`
+}
+
+// IsValidPersona checks if a persona string is valid
+func IsValidPersona(p string) bool {
+	for _, valid := range ValidPersonas {
+		if p == valid {
+			return true
+		}
+	}
+	return false
 }
 
 // AgentConfig represents a single agent's configuration
@@ -69,6 +90,14 @@ func Load(path string) (*Config, error) {
 	if cfg.Timeout == 0 {
 		cfg.Timeout = 300
 	}
+	if cfg.Persona == "" {
+		cfg.Persona = PersonaBalanced
+	}
+
+	// Validate persona
+	if !IsValidPersona(cfg.Persona) {
+		return nil, fmt.Errorf("invalid persona %q: must be one of %v", cfg.Persona, ValidPersonas)
+	}
 
 	// Apply environment variable overrides
 	cfg.ApplyEnvOverrides()
@@ -95,7 +124,8 @@ func (c *Config) ApplyEnvOverrides() {
 func Default() *Config {
 	return &Config{
 		OutputDir: "./outputs",
-		Timeout:   0, // 0 = no timeout (poll until completion). Set via --timeout for safety net.
+		Timeout:   0,                // 0 = no timeout (poll until completion). Set via --timeout for safety net.
+		Persona:   PersonaBalanced,  // Default to pragmatic middle-ground
 		Agents: map[string]AgentConfig{
 			// SPECIFICATION PHASE
 			"architect": {

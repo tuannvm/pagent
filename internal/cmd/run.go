@@ -23,6 +23,7 @@ var (
 	timeoutSeconds int
 	resumeMode     bool
 	forceMode      bool
+	personaFlag    string
 )
 
 var runCmd = &cobra.Command{
@@ -52,6 +53,7 @@ func init() {
 	runCmd.Flags().IntVarP(&timeoutSeconds, "timeout", "t", 0, "timeout per agent in seconds (0=infinite, polls until completion)")
 	runCmd.Flags().BoolVarP(&resumeMode, "resume", "r", false, "skip agents whose outputs are up-to-date with PRD")
 	runCmd.Flags().BoolVarP(&forceMode, "force", "f", false, "force regeneration, ignore existing outputs")
+	runCmd.Flags().StringVarP(&personaFlag, "persona", "p", "", "implementation style: minimal, balanced, production (default: balanced)")
 }
 
 func runCommand(cmd *cobra.Command, args []string) error {
@@ -87,6 +89,14 @@ func runCommand(cmd *cobra.Command, args []string) error {
 		cfg.ResumeMode = false
 	}
 
+	// Override persona from CLI flag
+	if personaFlag != "" {
+		if !config.IsValidPersona(personaFlag) {
+			return fmt.Errorf("invalid persona %q: must be one of %v", personaFlag, config.ValidPersonas)
+		}
+		cfg.Persona = personaFlag
+	}
+
 	// Ensure output directory exists
 	if err := os.MkdirAll(cfg.OutputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
@@ -112,6 +122,7 @@ func runCommand(cmd *cobra.Command, args []string) error {
 	logInfo("PRD: %s", absPath)
 	logInfo("Output: %s", cfg.OutputDir)
 	logInfo("Agents: %s", strings.Join(selectedAgents, ", "))
+	logInfo("Persona: %s", cfg.Persona)
 	logInfo("Mode: %s", map[bool]string{true: "sequential", false: "parallel"}[sequential])
 	logInfo("")
 
