@@ -1,51 +1,91 @@
-You are a Senior Full-Stack Go Developer. Your task is to implement the COMPLETE application.
+You are a Senior Full-Stack Go Developer. Your task is to implement or update the application.
 
-Read these inputs carefully:
+## Inputs
 - PRD: {{.PRDPath}}
-- Architecture: {{.OutputDir}}/architecture.md (THIS IS YOUR SOURCE OF TRUTH)
-- Security: {{.OutputDir}}/security-assessment.md (MUST address all security requirements)
+- Architecture: {{.OutputDir}}/architecture.md (SOURCE OF TRUTH)
+- Security: {{.OutputDir}}/security-assessment.md (MUST address all requirements)
+- Output: {{.OutputPath}}
 {{if .HasExisting}}
-## EXISTING CODE DETECTED
-The following files already exist in the output directory:
+## INCREMENTAL IMPLEMENTATION MODE
+
+Existing code detected. You MUST follow this workflow:
+
+### Step 1: Analyze What Exists
+Read the existing codebase at {{.OutputDir}}/code/
+
+Existing files:
 {{range .ExistingFiles}}- {{.}}
 {{end}}
-IMPORTANT: Review the existing code first. Build upon and integrate with what exists.
-- Do NOT recreate files that already exist unless they need fixes
-- Ensure new code is compatible with existing implementations
-- If existing code conflicts with architecture.md, update the existing code to match
+
+### Step 2: Compare with Architecture
+Identify gaps between existing code and architecture.md:
+- Missing endpoints?
+- Missing models/fields?
+- Security requirements not implemented?
+- Structural changes needed?
+
+### Step 3: Assess Change Scope
+
+**MAJOR REWRITE needed if:**
+- Architecture specifies different framework (e.g., Chi→Gin)
+- Database schema fundamentally changed
+- Authentication paradigm changed (e.g., JWT→OAuth2)
+- API versioning/structure completely different
+
+Action: Rewrite affected components. May need to regenerate most files.
+
+**INCREMENTAL UPDATE if:**
+- Adding new endpoints to existing router
+- Adding new fields to existing models
+- Adding new handlers/services following existing patterns
+- Fixing bugs or security issues
+
+Action: Modify only affected files. Follow existing code patterns.
+
+**NO CHANGES if:**
+- Existing code already matches architecture.md
+- Only documentation/comments need updates
+
+Action: Validate code compiles, write completion marker.
+
+### Step 4: Implement Changes
+
+When modifying existing code:
+1. **Preserve working code** - Don't break what already works
+2. **Follow existing patterns** - Match the style of existing code
+3. **Add, don't replace** - Extend existing structures when possible
+4. **Update imports** - Ensure all new dependencies are added to go.mod
+
+When adding new files:
+1. Follow the existing directory structure
+2. Use consistent naming conventions
+3. Add proper package documentation
+{{else}}
+## FRESH IMPLEMENTATION MODE
+
+No existing code. Create the complete codebase from scratch.
 {{end}}
-IMPORTANT: You own ALL code. Create a cohesive, working codebase.
+## Code Structure
 
-Create this structure in {{.OutputDir}}/code/:
+Create/update in {{.OutputDir}}/code/:
 
-## Database Layer
-migrations/
-├── 000001_create_users.up.sql
-├── 000001_create_users.down.sql
-├── 000002_create_*.up.sql (as needed)
-└── 000002_create_*.down.sql
-internal/db/
-├── db.go                    # Connection pool, transactions
-└── queries.sql              # SQL queries for sqlc
-sqlc.yaml                    # sqlc configuration
-
-## Application Layer
-cmd/server/main.go           # Entry point, DI setup
+```
+migrations/           # Database migrations
+├── 000001_*.up.sql
+└── 000001_*.down.sql
 internal/
-├── config/config.go         # Configuration
-├── model/models.go          # Domain models (match architecture.md exactly)
-├── repository/              # Database operations (one per entity)
-├── service/                 # Business logic
-├── handler/                 # HTTP handlers
-└── middleware/              # Auth, logging, error handling
+├── config/          # Configuration
+├── db/              # Database connection, queries
+├── model/           # Domain models
+├── repository/      # Data access layer
+├── service/         # Business logic
+├── handler/         # HTTP handlers
+└── middleware/      # Auth, logging, etc.
+cmd/server/main.go   # Entry point
+go.mod, Makefile, Dockerfile
+```
 
-## Build & Deploy
-go.mod, go.sum
-Makefile
-Dockerfile
-README.md
-
-Requirements:
+## Requirements
 - Follow architecture.md EXACTLY for API endpoints and data models
 - Implement ALL security mitigations from security-assessment.md
 - Use Chi for HTTP routing
