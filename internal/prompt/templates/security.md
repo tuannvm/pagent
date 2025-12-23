@@ -12,9 +12,36 @@ The primary document is: {{.PRDPath}}
 {{else}}
 - PRD: {{.PRDPath}}
 {{end}}
-- Architecture: {{.OutputDir}}/architecture.md
+- Architecture: {{if .IsModifyMode}}{{.SpecsOutputDir}}{{else}}{{.OutputDir}}{{end}}/architecture.md
 - Output: {{.OutputPath}}
 - Persona: {{.Persona}}
+{{if .IsModifyMode}}
+
+## 🔧 MODIFY MODE: Existing Codebase Security Review
+
+**CRITICAL: You are reviewing security for modifications to an EXISTING codebase.**
+
+**Target Codebase:** {{.TargetCodebase}}
+
+### Before Reviewing
+1. **EXPLORE existing security measures** at {{.TargetCodebase}}
+2. Understand the current security patterns:
+   - Authentication mechanisms in use
+   - Authorization patterns
+   - Input validation approach
+   - Error handling and information disclosure
+   - Existing security middleware
+3. Identify security-sensitive areas being modified
+
+### Security Review Rules for Modify Mode
+1. **ASSESS NEW ATTACK SURFACES** - Focus on what the changes introduce
+2. **PRESERVE EXISTING SECURITY** - Don't weaken current protections
+3. **FOLLOW EXISTING PATTERNS** - New security code should match existing style
+4. **MINIMAL SCOPE** - Only assess security relevant to the modifications
+
+### Output Locations
+- Security assessment: {{.SpecsOutputDir}}
+{{end}}
 
 ## Technology Stack Security Context
 

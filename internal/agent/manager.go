@@ -121,7 +121,17 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 		}
 	}
 
-	outputPath := filepath.Join(m.config.OutputDir, agentCfg.Output)
+	// Determine output path based on agent type and mode
+	// Spec outputs (architect, qa, security) go to SpecsOutputDir
+	// Code outputs (implementer, verifier) go to CodeOutputDir (or TargetCodebase in modify mode)
+	var outputPath string
+	if isSpecAgent(name) {
+		outputPath = filepath.Join(m.config.GetEffectiveSpecsOutputDir(), agentCfg.Output)
+	} else if isCodeAgent(name) {
+		outputPath = filepath.Join(m.config.GetEffectiveCodeOutputDir(), agentCfg.Output)
+	} else {
+		outputPath = filepath.Join(m.config.OutputDir, agentCfg.Output)
+	}
 	absOutputPath, _ := filepath.Abs(outputPath)
 
 	// Resume mode: use content hashing to determine if regeneration is needed
@@ -159,6 +169,12 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 		existingFiles = m.listExistingFiles(absOutputDir)
 	}
 
+	// Determine effective output directories based on mode
+	specsOutputDir := m.config.GetEffectiveSpecsOutputDir()
+	codeOutputDir := m.config.GetEffectiveCodeOutputDir()
+	absSpecsOutputDir, _ := filepath.Abs(specsOutputDir)
+	absCodeOutputDir, _ := filepath.Abs(codeOutputDir)
+
 	promptVars := prompt.Variables{
 		PRDPath:       m.prdPath,
 		InputFiles:    m.inputFiles,
@@ -174,6 +190,11 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 		// (both alias types.TechStack and types.ArchitecturePreferences)
 		Stack:       m.config.Stack,
 		Preferences: m.config.Preferences,
+		// Mode-specific variables
+		Mode:           m.config.Mode,
+		TargetCodebase: m.config.TargetCodebase,
+		SpecsOutputDir: absSpecsOutputDir,
+		CodeOutputDir:  absCodeOutputDir,
 	}
 
 	renderedPrompt, err := m.promptLoader.LoadAndRender(name, agentCfg.Prompt, agentCfg.PromptFile, promptVars)
@@ -604,6 +625,25 @@ func (m *Manager) ExpandWithDependencies(agents []string) []string {
 
 	// Return in topological order
 	return m.TopologicalSort(allAgents)
+}
+
+// isSpecAgent returns true if the agent produces specification documents
+func isSpecAgent(name string) bool {
+	specAgents := map[string]bool{
+		"architect": true,
+		"qa":        true,
+		"security":  true,
+	}
+	return specAgents[name]
+}
+
+// isCodeAgent returns true if the agent produces or modifies code
+func isCodeAgent(name string) bool {
+	codeAgents := map[string]bool{
+		"implementer": true,
+		"verifier":    true,
+	}
+	return codeAgents[name]
 }
 
 // listExistingFiles returns a list of files in the output directory

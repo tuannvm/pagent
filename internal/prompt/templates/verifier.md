@@ -12,12 +12,41 @@ The primary document is: {{.PRDPath}}
 {{else}}
 - PRD: {{.PRDPath}}
 {{end}}
-- Architecture: {{.OutputDir}}/architecture.md
-- Security: {{.OutputDir}}/security-assessment.md
-- Test Plan: {{.OutputDir}}/test-plan.md
-- Implemented Code: {{.OutputDir}}/code/
+- Architecture: {{if .IsModifyMode}}{{.SpecsOutputDir}}{{else}}{{.OutputDir}}{{end}}/architecture.md
+- Security: {{if .IsModifyMode}}{{.SpecsOutputDir}}{{else}}{{.OutputDir}}{{end}}/security-assessment.md
+- Test Plan: {{if .IsModifyMode}}{{.SpecsOutputDir}}{{else}}{{.OutputDir}}{{end}}/test-plan.md
+- Implemented Code: {{if .IsModifyMode}}{{.CodeOutputDir}}{{else}}{{.OutputDir}}/code/{{end}}
 - Output: {{.OutputPath}}
 - Persona: {{.Persona}}
+{{if .IsModifyMode}}
+
+## 🔧 MODIFY MODE: Existing Codebase Verification
+
+**CRITICAL: You are verifying modifications to an EXISTING codebase at {{.TargetCodebase}}.**
+
+### Verification Scope
+1. **VERIFY ONLY THE CHANGES** - Don't re-verify the entire codebase
+2. **CHECK EXISTING TESTS PASS** - Run the existing test suite
+3. **VERIFY NEW TESTS** - Ensure new tests follow existing patterns
+4. **CHECK INTEGRATION** - Verify changes integrate with existing code
+
+### Before Verifying
+1. Understand what was supposed to change (from architecture.md)
+2. Review the actual modifications made
+3. Run the existing test suite first
+4. Then run any new tests
+
+### Verification Checklist for Modify Mode
+- [ ] Existing tests still pass (`go test ./...` or equivalent)
+- [ ] New code follows existing patterns
+- [ ] Changes are minimal and focused
+- [ ] No unintended side effects
+- [ ] Build succeeds with modifications
+
+### Output Locations
+- Verification report: {{.SpecsOutputDir}}
+- Code changes verified at: {{.CodeOutputDir}}
+{{end}}
 {{if .HasExisting}}
 ## INCREMENTAL VERIFICATION MODE
 

@@ -13,6 +13,7 @@ import (
 	"github.com/tuannvm/pm-agent-workflow/internal/agent"
 	"github.com/tuannvm/pm-agent-workflow/internal/config"
 	"github.com/tuannvm/pm-agent-workflow/internal/input"
+	"github.com/tuannvm/pm-agent-workflow/internal/postprocess"
 )
 
 var (
@@ -137,11 +138,23 @@ func runCommand(cmd *cobra.Command, args []string) error {
 			logVerbose("  - %s", f)
 		}
 	}
-	logInfo("Output: %s", cfg.OutputDir)
+
+	// Display mode information
+	executionMode := "create"
+	if cfg.IsModifyMode() {
+		executionMode = "modify"
+		logInfo("Mode: %s (targeting: %s)", executionMode, cfg.TargetCodebase)
+		logInfo("Specs output: %s", cfg.GetEffectiveSpecsOutputDir())
+		logInfo("Code output: %s", cfg.GetEffectiveCodeOutputDir())
+	} else {
+		logInfo("Mode: %s", executionMode)
+		logInfo("Output: %s", cfg.OutputDir)
+	}
+
 	logInfo("Agents: %s", strings.Join(selectedAgents, ", "))
 	logInfo("Persona: %s", cfg.Persona)
 	logInfo("Architecture: %s", map[bool]string{true: "stateless", false: "database-backed"}[cfg.Preferences.Stateless])
-	logInfo("Mode: %s", map[bool]string{true: "sequential", false: "parallel"}[sequential])
+	logInfo("Execution: %s", map[bool]string{true: "sequential", false: "parallel"}[sequential])
 	logInfo("")
 
 	// Set up signal handling for graceful shutdown
@@ -186,7 +199,37 @@ func runCommand(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Run post-processing (only in modify mode)
+	if cfg.IsModifyMode() && hasPostProcessing(cfg) {
+		logInfo("")
+		logInfo("=== Post-Processing ===")
+
+		pp := postprocess.NewRunner(cfg, verbose)
+		ppResults := pp.Run()
+
+		for _, r := range ppResults {
+			if r.Success {
+				logInfo("✓ %s: %s", r.Step, r.Output)
+			} else {
+				logError("✗ %s: %v", r.Step, r.Error)
+			}
+		}
+
+		// Check for post-processing failures
+		for _, r := range ppResults {
+			if !r.Success {
+				return fmt.Errorf("post-processing failed: %s", r.Step)
+			}
+		}
+	}
+
 	return nil
+}
+
+// hasPostProcessing returns true if any post-processing is configured
+func hasPostProcessing(cfg *config.Config) bool {
+	pp := cfg.PostProcessing
+	return pp.GenerateDiffSummary || pp.GeneratePRDescription || len(pp.ValidationCommands) > 0
 }
 
 // runParallel runs agents in parallel, but respects dependency levels.

@@ -14,6 +14,36 @@ The primary document is: {{.PRDPath}}
 {{end}}
 - Output: {{.OutputPath}}
 - Persona: {{.Persona}}
+{{if .IsModifyMode}}
+## 🔧 MODIFY MODE: Existing Codebase
+
+**CRITICAL: You are modifying an EXISTING codebase, not creating a new one.**
+
+**Target Codebase:** {{.TargetCodebase}}
+
+### Before Designing
+1. **EXPLORE the existing codebase** at {{.TargetCodebase}}
+2. Understand the current architecture, patterns, and conventions
+3. Identify the specific files and modules that need modification
+4. Note existing patterns for error handling, logging, testing
+
+### Your Task
+Design MODIFICATIONS to the existing code, not a new architecture. Your document should specify:
+- **Existing files to modify** (with line number references where possible)
+- **New files to add** (following existing naming conventions)
+- **Integration points** with existing code
+- **Patterns to follow** from the existing codebase
+
+### DO NOT
+- Propose rewrites of existing working code
+- Change established patterns or conventions
+- Add unnecessary abstractions
+- Create new packages when existing ones can be extended
+
+### Specifications Output
+Your architecture document will be saved to: {{.SpecsOutputDir}}
+Code modifications will target: {{.CodeOutputDir}}
+{{end}}
 
 ## Project Preferences
 

@@ -35,6 +35,13 @@ type Variables struct {
 	Persona       string                  // Implementation style: minimal, balanced, production
 	Stack         TechStack               // Technology stack preferences
 	Preferences   ArchitecturePreferences // Architectural style preferences
+
+	// Mode-specific variables for existing codebase modifications
+	Mode           string // "create" or "modify"
+	TargetCodebase string // Path to existing codebase (for modify mode)
+	SpecsOutputDir string // Directory for spec outputs
+	CodeOutputDir  string // Directory for code outputs
+
 	// Custom allows arbitrary key-value pairs
 	Custom map[string]string
 }
@@ -52,6 +59,21 @@ func (v Variables) IsBalanced() bool {
 // IsProduction returns true if persona is "production"
 func (v Variables) IsProduction() bool {
 	return v.Persona == "production"
+}
+
+// IsModifyMode returns true if mode is "modify"
+func (v Variables) IsModifyMode() bool {
+	return v.Mode == "modify"
+}
+
+// IsCreateMode returns true if mode is "create" or empty (default)
+func (v Variables) IsCreateMode() bool {
+	return v.Mode == "" || v.Mode == "create"
+}
+
+// HasTargetCodebase returns true if a target codebase is specified
+func (v Variables) HasTargetCodebase() bool {
+	return v.TargetCodebase != ""
 }
 
 // IsStateless returns true if stateless architecture is preferred

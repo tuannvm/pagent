@@ -20,6 +20,15 @@ const (
 // ValidPersonas lists all valid persona values
 var ValidPersonas = []string{PersonaMinimal, PersonaBalanced, PersonaProduction}
 
+// Mode constants define execution modes
+const (
+	ModeCreate = "create" // Create a new codebase from scratch (default)
+	ModeModify = "modify" // Modify an existing codebase
+)
+
+// ValidModes lists all valid mode values
+var ValidModes = []string{ModeCreate, ModeModify}
+
 // Type aliases for backward compatibility and convenience
 // These reference the canonical types in the types package
 type (
@@ -37,6 +46,22 @@ type Config struct {
 	ResumeMode  bool                    `yaml:"-"`           // Set via CLI flag, not config file
 	ForceMode   bool                    `yaml:"-"`           // Set via CLI flag, not config file
 	Agents      map[string]AgentConfig  `yaml:"agents"`
+
+	// Mode-specific configuration for existing codebase modifications
+	Mode           string   `yaml:"mode"`            // "create" (default) or "modify"
+	TargetCodebase string   `yaml:"target_codebase"` // Path to existing codebase (required for modify mode)
+	InputFiles     []string `yaml:"input_files"`     // Multiple input files (TRD, requirements, etc.)
+	SpecsOutputDir string   `yaml:"specs_output_dir"` // Directory for spec outputs (default: output_dir)
+
+	// Post-processing options
+	PostProcessing PostProcessingConfig `yaml:"post_processing"`
+}
+
+// PostProcessingConfig contains options for post-execution actions
+type PostProcessingConfig struct {
+	GenerateDiffSummary    bool     `yaml:"generate_diff_summary"`    // Generate git diff summary
+	GeneratePRDescription  bool     `yaml:"generate_pr_description"`  // Generate PR description from changes
+	ValidationCommands     []string `yaml:"validation_commands"`      // Custom commands to run after implementation
 }
 
 // IsValidPersona checks if a persona string is valid
@@ -47,6 +72,45 @@ func IsValidPersona(p string) bool {
 		}
 	}
 	return false
+}
+
+// IsValidMode checks if a mode string is valid
+func IsValidMode(m string) bool {
+	if m == "" {
+		return true // Empty defaults to create
+	}
+	for _, valid := range ValidModes {
+		if m == valid {
+			return true
+		}
+	}
+	return false
+}
+
+// IsModifyMode returns true if the config is set to modify an existing codebase
+func (c *Config) IsModifyMode() bool {
+	return c.Mode == ModeModify
+}
+
+// GetEffectiveCodeOutputDir returns the directory where code should be written
+// In modify mode, this is the target codebase; in create mode, it's output_dir/code
+func (c *Config) GetEffectiveCodeOutputDir() string {
+	if c.IsModifyMode() && c.TargetCodebase != "" {
+		return c.TargetCodebase
+	}
+	return filepath.Join(c.OutputDir, "code")
+}
+
+// GetEffectiveSpecsOutputDir returns the directory where specs should be written
+func (c *Config) GetEffectiveSpecsOutputDir() string {
+	if c.SpecsOutputDir != "" {
+		return c.SpecsOutputDir
+	}
+	if c.IsModifyMode() && c.TargetCodebase != "" {
+		// In modify mode, default specs to a .pm-agents subdirectory
+		return filepath.Join(c.TargetCodebase, ".pm-agents", "specs")
+	}
+	return c.OutputDir
 }
 
 // AgentConfig represents a single agent's configuration
@@ -103,10 +167,29 @@ func Load(path string) (*Config, error) {
 	if cfg.Persona == "" {
 		cfg.Persona = PersonaBalanced
 	}
+	if cfg.Mode == "" {
+		cfg.Mode = ModeCreate
+	}
 
 	// Validate persona
 	if !IsValidPersona(cfg.Persona) {
 		return nil, fmt.Errorf("invalid persona %q: must be one of %v", cfg.Persona, ValidPersonas)
+	}
+
+	// Validate mode
+	if !IsValidMode(cfg.Mode) {
+		return nil, fmt.Errorf("invalid mode %q: must be one of %v", cfg.Mode, ValidModes)
+	}
+
+	// Validate modify mode requirements
+	if cfg.Mode == ModeModify {
+		if cfg.TargetCodebase == "" {
+			return nil, fmt.Errorf("target_codebase is required when mode is %q", ModeModify)
+		}
+		// Verify target codebase exists
+		if _, err := os.Stat(cfg.TargetCodebase); os.IsNotExist(err) {
+			return nil, fmt.Errorf("target_codebase %q does not exist", cfg.TargetCodebase)
+		}
 	}
 
 	// Apply environment variable overrides
@@ -148,8 +231,13 @@ func Default() *Config {
 		OutputDir:   "./outputs",
 		Timeout:     0,                    // 0 = no timeout (poll until completion). Set via --timeout for safety net.
 		Persona:     PersonaBalanced,      // Default to pragmatic middle-ground
+		Mode:        ModeCreate,           // Default to creating new codebase
 		Stack:       DefaultStack(),       // Default technology stack
 		Preferences: DefaultPreferences(), // Default architecture preferences
+		PostProcessing: PostProcessingConfig{
+			GenerateDiffSummary:   false,
+			GeneratePRDescription: false,
+		},
 		Agents: map[string]AgentConfig{
 			// SPECIFICATION PHASE
 			"architect": {

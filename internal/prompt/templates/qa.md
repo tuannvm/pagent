@@ -12,9 +12,35 @@ The primary document is: {{.PRDPath}}
 {{else}}
 - PRD: {{.PRDPath}}
 {{end}}
-- Architecture: {{.OutputDir}}/architecture.md
+- Architecture: {{if .IsModifyMode}}{{.SpecsOutputDir}}{{else}}{{.OutputDir}}{{end}}/architecture.md
 - Output: {{.OutputPath}}
 - Persona: {{.Persona}}
+{{if .IsModifyMode}}
+
+## 🔧 MODIFY MODE: Existing Codebase Testing
+
+**CRITICAL: You are designing tests for modifications to an EXISTING codebase.**
+
+**Target Codebase:** {{.TargetCodebase}}
+
+### Before Designing Tests
+1. **EXPLORE existing tests** at {{.TargetCodebase}}
+2. Understand the current testing patterns:
+   - Test file organization and naming
+   - Testing frameworks used (testify, go test, etc.)
+   - Mock/stub patterns
+   - Fixture and helper patterns
+3. Identify existing test coverage for areas being modified
+
+### Test Design Rules for Modify Mode
+1. **FOLLOW EXISTING TEST PATTERNS** - Match the style of existing tests
+2. **EXTEND, DON'T REPLACE** - Add new test cases, don't rewrite existing ones
+3. **PRESERVE COVERAGE** - Ensure existing tests still pass
+4. **FOCUS ON CHANGES** - Prioritize testing new/modified functionality
+
+### Output Locations
+- Test plan: {{.SpecsOutputDir}}
+{{end}}
 {{if .HasExisting}}
 ## INCREMENTAL UPDATE MODE
 

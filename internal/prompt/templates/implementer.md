@@ -12,10 +12,45 @@ The primary document is: {{.PRDPath}}
 {{else}}
 - PRD: {{.PRDPath}}
 {{end}}
-- Architecture: {{.OutputDir}}/architecture.md (SOURCE OF TRUTH)
-- Security: {{.OutputDir}}/security-assessment.md (MUST address all requirements)
+- Architecture: {{if .IsModifyMode}}{{.SpecsOutputDir}}{{else}}{{.OutputDir}}{{end}}/architecture.md (SOURCE OF TRUTH)
+- Security: {{if .IsModifyMode}}{{.SpecsOutputDir}}{{else}}{{.OutputDir}}{{end}}/security-assessment.md (MUST address all requirements)
 - Output: {{.OutputPath}}
 - Persona: {{.Persona}}
+{{if .IsModifyMode}}
+
+## 🔧 MODIFY MODE: Existing Codebase Implementation
+
+**CRITICAL: You are modifying EXISTING code at {{.TargetCodebase}}, not creating a new codebase.**
+
+### Target Codebase
+**Path:** {{.TargetCodebase}}
+
+### Before Implementing
+1. **EXPLORE the existing codebase thoroughly**
+2. Understand the existing:
+   - Package structure and naming conventions
+   - Error handling patterns
+   - Logging approach
+   - Testing patterns
+   - Dependency injection style (if any)
+
+### Implementation Rules for Modify Mode
+1. **FOLLOW EXISTING PATTERNS** - Match the style of surrounding code
+2. **MINIMAL CHANGES** - Only modify what's necessary for the requirements
+3. **NO REWRITES** - Don't refactor working code
+4. **PRESERVE TESTS** - Existing tests must continue to pass
+5. **ADD TESTS** - Write tests for new functionality following existing test patterns
+
+### Output Locations
+- Specifications: {{.SpecsOutputDir}}
+- Code modifications: {{.CodeOutputDir}}
+
+### Completion Criteria
+1. All changes follow existing codebase patterns
+2. Existing tests still pass
+3. New tests cover the modifications
+4. Code compiles without errors
+{{end}}
 
 ## Technology Stack (USE THESE)
 
