@@ -21,8 +21,24 @@ type Variables struct {
 	AgentName     string
 	ExistingFiles []string // List of files already in OutputDir
 	HasExisting   bool     // True if there are existing outputs to consider
+	Persona       string   // Implementation style: minimal, balanced, production
 	// Custom allows arbitrary key-value pairs
 	Custom map[string]string
+}
+
+// IsMinimal returns true if persona is "minimal"
+func (v Variables) IsMinimal() bool {
+	return v.Persona == "minimal"
+}
+
+// IsBalanced returns true if persona is "balanced"
+func (v Variables) IsBalanced() bool {
+	return v.Persona == "balanced"
+}
+
+// IsProduction returns true if persona is "production"
+func (v Variables) IsProduction() bool {
+	return v.Persona == "production"
 }
 
 // Loader handles loading and rendering prompt templates
@@ -86,7 +102,9 @@ func (l *Loader) Render(promptTemplate string, vars Variables) (string, error) {
 	tmpl, err := template.New("prompt").
 		Option("missingkey=error").
 		Funcs(template.FuncMap{
-			"join": strings.Join,
+			"join":  strings.Join,
+			"upper": strings.ToUpper,
+			"lower": strings.ToLower,
 		}).Parse(prompt)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse prompt template: %w", err)
