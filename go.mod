@@ -1,4 +1,4 @@
-module github.com/tuannvm/pm-agent-workflow
+module github.com/tuannvm/pagent
 
 go 1.25.5
 

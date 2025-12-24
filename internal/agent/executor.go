@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tuannvm/pm-agent-workflow/internal/api"
+	"github.com/tuannvm/pagent/internal/api"
 )
 
 // spawnAgent starts an agent using the agentapi library

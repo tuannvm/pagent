@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/tuannvm/pm-agent-workflow/internal/types"
+	"github.com/tuannvm/pagent/internal/types"
 	"gopkg.in/yaml.v3"
 )
 
@@ -36,7 +36,7 @@ type (
 	ArchitecturePreferences = types.ArchitecturePreferences
 )
 
-// Config represents the pm-agents configuration
+// Config represents the pagent configuration
 type Config struct {
 	OutputDir   string                  `yaml:"output_dir"`
 	Timeout     int                     `yaml:"timeout"`
@@ -107,8 +107,8 @@ func (c *Config) GetEffectiveSpecsOutputDir() string {
 		return c.SpecsOutputDir
 	}
 	if c.IsModifyMode() && c.TargetCodebase != "" {
-		// In modify mode, default specs to a .pm-agents subdirectory
-		return filepath.Join(c.TargetCodebase, ".pm-agents", "specs")
+		// In modify mode, default specs to a .pagent subdirectory
+		return filepath.Join(c.TargetCodebase, ".pagent", "specs")
 	}
 	return c.OutputDir
 }
@@ -130,9 +130,9 @@ func Load(path string) (*Config, error) {
 	} else {
 		// Check standard locations
 		locations := []string{
-			".pm-agents/config.yaml",
-			".pm-agents/config.yml",
-			filepath.Join(os.Getenv("HOME"), ".pm-agents/config.yaml"),
+			".pagent/config.yaml",
+			".pagent/config.yml",
+			filepath.Join(os.Getenv("HOME"), ".pagent/config.yaml"),
 		}
 
 		for _, loc := range locations {
@@ -216,10 +216,10 @@ func Load(path string) (*Config, error) {
 
 // ApplyEnvOverrides applies environment variable overrides to config
 func (c *Config) ApplyEnvOverrides() {
-	if envDir := os.Getenv("PM_AGENTS_OUTPUT_DIR"); envDir != "" {
+	if envDir := os.Getenv("PAGENT_OUTPUT_DIR"); envDir != "" {
 		c.OutputDir = envDir
 	}
-	if envTimeout := os.Getenv("PM_AGENTS_TIMEOUT"); envTimeout != "" {
+	if envTimeout := os.Getenv("PAGENT_TIMEOUT"); envTimeout != "" {
 		var timeout int
 		if _, err := fmt.Sscanf(envTimeout, "%d", &timeout); err == nil && timeout > 0 {
 			c.Timeout = timeout

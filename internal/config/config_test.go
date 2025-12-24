@@ -137,11 +137,11 @@ func TestGetEffectiveSpecsOutputDir(t *testing.T) {
 			expected:  "/outputs",
 		},
 		{
-			name:           "modify mode uses target/.pm-agents/specs",
+			name:           "modify mode uses target/.pagent/specs",
 			mode:           ModeModify,
 			targetCodebase: "/existing/project",
 			outputDir:      "/outputs",
-			expected:       "/existing/project/.pm-agents/specs",
+			expected:       "/existing/project/.pagent/specs",
 		},
 	}
 
@@ -400,8 +400,8 @@ func TestApplyEnvOverrides(t *testing.T) {
 	}
 
 	// Set env vars using t.Setenv (auto cleanup)
-	t.Setenv("PM_AGENTS_OUTPUT_DIR", "/from/env")
-	t.Setenv("PM_AGENTS_TIMEOUT", "600")
+	t.Setenv("PAGENT_OUTPUT_DIR", "/from/env")
+	t.Setenv("PAGENT_TIMEOUT", "600")
 
 	cfg.ApplyEnvOverrides()
 
@@ -420,7 +420,7 @@ func TestApplyEnvOverridesInvalidTimeout(t *testing.T) {
 	}
 
 	// Invalid timeout should be ignored
-	t.Setenv("PM_AGENTS_TIMEOUT", "invalid")
+	t.Setenv("PAGENT_TIMEOUT", "invalid")
 
 	cfg.ApplyEnvOverrides()
 

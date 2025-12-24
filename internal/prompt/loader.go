@@ -9,7 +9,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/tuannvm/pm-agent-workflow/internal/types"
+	"github.com/tuannvm/pagent/internal/types"
 )
 
 //go:embed templates/*.md

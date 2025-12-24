@@ -44,7 +44,7 @@ type AgentOutput struct {
 }
 
 // StateFile is the default location for resume state
-const StateFile = ".pm-agents/.resume-state.json"
+const StateFile = ".pagent/.resume-state.json"
 
 // Manager handles resume state operations.
 type Manager struct {

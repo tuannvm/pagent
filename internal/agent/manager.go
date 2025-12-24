@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tuannvm/pm-agent-workflow/internal/api"
-	"github.com/tuannvm/pm-agent-workflow/internal/config"
-	"github.com/tuannvm/pm-agent-workflow/internal/prompt"
-	"github.com/tuannvm/pm-agent-workflow/internal/state"
+	"github.com/tuannvm/pagent/internal/api"
+	"github.com/tuannvm/pagent/internal/config"
+	"github.com/tuannvm/pagent/internal/prompt"
+	"github.com/tuannvm/pagent/internal/state"
 )
 
 const (
@@ -22,7 +22,7 @@ const (
 
 // State file paths
 var (
-	StateFile = filepath.Join(os.TempDir(), "pm-agents-state.json")
+	StateFile = filepath.Join(os.TempDir(), "pagent-state.json")
 )
 
 // Result represents the result of running an agent

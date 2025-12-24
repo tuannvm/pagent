@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tuannvm/pm-agent-workflow/internal/config"
+	"github.com/tuannvm/pagent/internal/config"
 )
 
 func TestExtractSummary(t *testing.T) {

@@ -1,4 +1,4 @@
-// Package types contains shared type definitions used across the pm-agents codebase.
+// Package types contains shared type definitions used across the pagent codebase.
 // This avoids duplication between config and prompt packages.
 package types
 

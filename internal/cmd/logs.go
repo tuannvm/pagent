@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/tuannvm/pm-agent-workflow/internal/agent"
-	"github.com/tuannvm/pm-agent-workflow/internal/api"
+	"github.com/tuannvm/pagent/internal/agent"
+	"github.com/tuannvm/pagent/internal/api"
 )
 
 var (

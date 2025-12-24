@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/tuannvm/pm-agent-workflow/internal/config"
+	"github.com/tuannvm/pagent/internal/config"
 	"gopkg.in/yaml.v3"
 )
 
@@ -51,9 +51,9 @@ func initCommand(cmd *cobra.Command, args []string) error {
 	}
 
 	// Add header comment
-	header := `# PM Agents Configuration
+	header := `# Pagent Configuration
 # Customize agent prompts and settings below
-# Documentation: https://github.com/tuannvm/pm-agent-workflow
+# Documentation: https://github.com/tuannvm/pagent
 
 `
 

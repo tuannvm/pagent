@@ -6,7 +6,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
-	"github.com/tuannvm/pm-agent-workflow/internal/config"
+	"github.com/tuannvm/pagent/internal/config"
 )
 
 var agentsCmd = &cobra.Command{

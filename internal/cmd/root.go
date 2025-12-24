@@ -15,8 +15,8 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "pagent",
-	Short: "PM Agent Workflow - Orchestrate specialist agents from PRD",
-	Long: `PM Agent Workflow is a CLI tool that spawns specialist agents
+	Short: "Pagent - Orchestrate specialist agents from PRD",
+	Long: `Pagent is a CLI tool that spawns specialist agents
 (Design, Tech, QA, Security, Infra) to transform a PRD into
 actionable deliverables.
 

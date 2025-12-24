@@ -39,7 +39,7 @@ var _ Orchestrator = (*Manager)(nil)
 // OrchestratorConfig contains configuration for creating an orchestrator.
 // This provides a cleaner factory interface than passing many parameters.
 type OrchestratorConfig struct {
-	// Config is the pm-agents configuration
+	// Config is the pagent configuration
 	Config interface {
 		GetAgentNames() []string
 		GetDependencies(name string) []string

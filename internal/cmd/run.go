@@ -10,10 +10,10 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
-	"github.com/tuannvm/pm-agent-workflow/internal/agent"
-	"github.com/tuannvm/pm-agent-workflow/internal/config"
-	"github.com/tuannvm/pm-agent-workflow/internal/input"
-	"github.com/tuannvm/pm-agent-workflow/internal/postprocess"
+	"github.com/tuannvm/pagent/internal/agent"
+	"github.com/tuannvm/pagent/internal/config"
+	"github.com/tuannvm/pagent/internal/input"
+	"github.com/tuannvm/pagent/internal/postprocess"
 )
 
 var (
@@ -129,7 +129,7 @@ func runCommand(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	logInfo("Starting PM Agent Workflow")
+	logInfo("Starting Pagent")
 	logInfo("%s", inp.Summary())
 	if inp.IsDirectory {
 		logVerbose("Input files:")

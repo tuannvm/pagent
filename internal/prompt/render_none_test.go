@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tuannvm/pm-agent-workflow/internal/types"
+	"github.com/tuannvm/pagent/internal/types"
 )
 
 func TestRenderWithNoneValues(t *testing.T) {

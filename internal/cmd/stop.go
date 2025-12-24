@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/tuannvm/pm-agent-workflow/internal/agent"
+	"github.com/tuannvm/pagent/internal/agent"
 )
 
 var (
