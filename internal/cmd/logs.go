@@ -1,39 +1,48 @@
 package cmd
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/tuannvm/pagent/internal/agent"
 	"github.com/tuannvm/pagent/internal/api"
 )
 
-var (
-	followLogs bool
-)
+func logsMain(args []string) error {
+	fs := flag.NewFlagSet("logs", flag.ContinueOnError)
+	var followLogs bool
+	fs.BoolVar(&followLogs, "f", false, "follow log output (not implemented)")
+	fs.BoolVar(&followLogs, "follow", false, "follow log output (not implemented)")
+	parseGlobalFlags(fs)
 
-var logsCmd = &cobra.Command{
-	Use:   "logs <agent>",
-	Short: "View agent conversation history",
-	Long: `View the conversation history for a specific agent.
+	fs.Usage = func() {
+		fmt.Print(`Usage: pagent logs <agent> [flags]
 
-Shows all messages exchanged between the user and the agent.
+View the conversation history for a specific agent.
 
-Example:
+Arguments:
+  <agent>    Name of the agent
+
+Flags:
+  -f, -follow    Follow log output (not implemented)
+
+Examples:
   pagent logs design
-  pagent logs tech --follow`,
-	Args: cobra.ExactArgs(1),
-	RunE: logsCommand,
-}
+  pagent logs tech
+`)
+	}
 
-func init() {
-	rootCmd.AddCommand(logsCmd)
-	logsCmd.Flags().BoolVarP(&followLogs, "follow", "f", false, "follow log output (not implemented)")
-}
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 
-func logsCommand(cmd *cobra.Command, args []string) error {
-	agentName := args[0]
+	if fs.NArg() < 1 {
+		fs.Usage()
+		return fmt.Errorf("missing required argument: agent name")
+	}
+
+	agentName := fs.Arg(0)
 
 	// Read state file
 	state, err := agent.LoadState()
@@ -64,17 +73,17 @@ func logsCommand(cmd *cobra.Command, args []string) error {
 
 	// Print messages
 	for _, msg := range messages {
-		rolePrefix := "🤖"
+		rolePrefix := "Agent"
 		if msg.Role == "user" {
-			rolePrefix = "👤"
+			rolePrefix = "User"
 		}
 
-		fmt.Printf("%s [%s]\n", rolePrefix, msg.Role)
+		fmt.Printf("[%s]\n", rolePrefix)
 		fmt.Printf("%s\n\n", msg.Content)
 	}
 
 	if followLogs {
-		logInfo("Note: --follow is not yet implemented. Use status to check agent state.")
+		logInfo("Note: -follow is not yet implemented. Use status to check agent state.")
 	}
 
 	return nil

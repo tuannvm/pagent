@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -9,63 +10,89 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/spf13/cobra"
 	"github.com/tuannvm/pagent/internal/agent"
 	"github.com/tuannvm/pagent/internal/config"
 	"github.com/tuannvm/pagent/internal/input"
 	"github.com/tuannvm/pagent/internal/postprocess"
 )
 
-var (
-	agentsFlag     string
-	outputDir      string
-	sequential     bool
-	configPath     string
-	timeoutSeconds int
-	resumeMode  bool
-	forceMode   bool
-	personaFlag string
-)
+func runMain(args []string) error {
+	fs := flag.NewFlagSet("run", flag.ContinueOnError)
 
-var runCmd = &cobra.Command{
-	Use:   "run <input>",
-	Short: "Run specialist agents on input files",
-	Long: `Run specialist agents to transform input documents into deliverables.
+	// Define flags
+	var (
+		agentsFlag     string
+		outputDir      string
+		sequential     bool
+		configPath     string
+		timeoutSeconds int
+		resumeMode     bool
+		forceMode      bool
+		personaFlag    string
+		stateless      bool
+		noStateless    bool
+	)
 
-Input can be a single file or a directory containing multiple files.
-Supported file types: .md, .yaml, .yml, .json, .txt
+	fs.StringVar(&agentsFlag, "a", "", "comma-separated list of agents (default: all)")
+	fs.StringVar(&agentsFlag, "agents", "", "comma-separated list of agents (default: all)")
+	fs.StringVar(&outputDir, "o", "./outputs", "output directory")
+	fs.StringVar(&outputDir, "output", "./outputs", "output directory")
+	fs.BoolVar(&sequential, "s", false, "run agents in dependency order")
+	fs.BoolVar(&sequential, "sequential", false, "run agents in dependency order")
+	fs.StringVar(&configPath, "c", "", "config file path")
+	fs.StringVar(&configPath, "config", "", "config file path")
+	fs.IntVar(&timeoutSeconds, "t", 0, "timeout per agent in seconds (0=infinite)")
+	fs.IntVar(&timeoutSeconds, "timeout", 0, "timeout per agent in seconds (0=infinite)")
+	fs.BoolVar(&resumeMode, "r", false, "skip agents whose outputs are up-to-date")
+	fs.BoolVar(&resumeMode, "resume", false, "skip agents whose outputs are up-to-date")
+	fs.BoolVar(&forceMode, "f", false, "force regeneration, ignore existing outputs")
+	fs.BoolVar(&forceMode, "force", false, "force regeneration, ignore existing outputs")
+	fs.StringVar(&personaFlag, "p", "", "implementation style: minimal, balanced, production")
+	fs.StringVar(&personaFlag, "persona", "", "implementation style: minimal, balanced, production")
+	fs.BoolVar(&stateless, "stateless", false, "prefer stateless architecture")
+	fs.BoolVar(&noStateless, "no-stateless", false, "prefer traditional database-backed architecture")
+	parseGlobalFlags(fs)
 
-By default, all agents run in parallel. Use --sequential to run
-agents in dependency order.
+	fs.Usage = func() {
+		fmt.Print(`Usage: pagent run <input> [flags]
+
+Run specialist agents to transform input documents into deliverables.
+
+Arguments:
+  <input>    Input file or directory (.md, .yaml, .yml, .json, .txt)
+
+Flags:
+  -a, -agents string     Comma-separated list of agents (default: all)
+  -o, -output string     Output directory (default: ./outputs)
+  -s, -sequential        Run agents in dependency order
+  -c, -config string     Config file path
+  -t, -timeout int       Timeout per agent in seconds (0=infinite)
+  -r, -resume            Skip agents whose outputs are up-to-date
+  -f, -force             Force regeneration, ignore existing outputs
+  -p, -persona string    Implementation style: minimal, balanced, production
+  -stateless             Prefer stateless architecture
+  -no-stateless          Prefer traditional database-backed architecture
+  -v, -verbose           Verbose output
+  -q, -quiet             Quiet output (errors only)
 
 Examples:
-  pagent run ./prd.md                    # Single PRD file
-  pagent run ./input/                    # Directory with multiple inputs
-  pagent run ./specs/ --agents architect # Only run architect
-  pagent run ./prd.md --persona minimal  # MVP implementation`,
-	Args: cobra.ExactArgs(1),
-	RunE: runCommand,
-}
+  pagent run ./prd.md
+  pagent run ./prd.md -a architect,qa -s
+  pagent run ./prd.md -p minimal
+  pagent run ./input/ -o ./docs/specs/
+`)
+	}
 
-func init() {
-	rootCmd.AddCommand(runCmd)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 
-	runCmd.Flags().StringVarP(&agentsFlag, "agents", "a", "", "comma-separated list of agents (default: all)")
-	runCmd.Flags().StringVarP(&outputDir, "output", "o", "./outputs", "output directory")
-	runCmd.Flags().BoolVarP(&sequential, "sequential", "s", false, "run agents in dependency order")
-	runCmd.Flags().StringVarP(&configPath, "config", "c", "", "config file path")
-	runCmd.Flags().IntVarP(&timeoutSeconds, "timeout", "t", 0, "timeout per agent in seconds (0=infinite, polls until completion)")
-	runCmd.Flags().BoolVarP(&resumeMode, "resume", "r", false, "skip agents whose outputs are up-to-date with PRD")
-	runCmd.Flags().BoolVarP(&forceMode, "force", "f", false, "force regeneration, ignore existing outputs")
-	runCmd.Flags().StringVarP(&personaFlag, "persona", "p", "", "implementation style: minimal, balanced, production (default: balanced)")
+	if fs.NArg() < 1 {
+		fs.Usage()
+		return fmt.Errorf("missing required argument: input file or directory")
+	}
 
-	// Stateless flags - use Changed() to detect if explicitly set
-	runCmd.Flags().Bool("stateless", false, "prefer stateless architecture (event-driven, no traditional DB)")
-	runCmd.Flags().Bool("no-stateless", false, "prefer traditional database-backed architecture")
-}
-
-func runCommand(cmd *cobra.Command, args []string) error {
-	inputPath := args[0]
+	inputPath := fs.Arg(0)
 
 	// Discover input files (supports both single file and directory)
 	inp, err := input.Discover(inputPath)
@@ -81,7 +108,7 @@ func runCommand(cmd *cobra.Command, args []string) error {
 	}
 
 	// Override with flags
-	if outputDir != "" {
+	if outputDir != "" && outputDir != "./outputs" {
 		cfg.OutputDir = outputDir
 	}
 	cfg.Timeout = timeoutSeconds
@@ -102,9 +129,9 @@ func runCommand(cmd *cobra.Command, args []string) error {
 	}
 
 	// Override stateless preference from CLI flags
-	if cmd.Flags().Changed("stateless") {
+	if stateless {
 		cfg.Preferences.Stateless = true
-	} else if cmd.Flags().Changed("no-stateless") {
+	} else if noStateless {
 		cfg.Preferences.Stateless = false
 	}
 
@@ -232,10 +259,7 @@ func hasPostProcessing(cfg *config.Config) bool {
 }
 
 // runParallel runs agents in parallel, but respects dependency levels.
-// Agents within the same dependency level run concurrently.
-// All agents in a level must complete before the next level starts.
 func runParallel(ctx context.Context, manager *agent.Manager, agents []string) ([]agent.Result, error) {
-	// Group agents by dependency level
 	levels := manager.GetDependencyLevels(agents)
 	var allResults []agent.Result
 
@@ -249,7 +273,6 @@ func runParallel(ctx context.Context, manager *agent.Manager, agents []string) (
 		var wg sync.WaitGroup
 		resultCh := make(chan agent.Result, len(level))
 
-		// Run all agents in this level concurrently
 		for _, name := range level {
 			wg.Add(1)
 			go func(agentName string) {
@@ -259,13 +282,11 @@ func runParallel(ctx context.Context, manager *agent.Manager, agents []string) (
 			}(name)
 		}
 
-		// Wait for all agents in this level
 		go func() {
 			wg.Wait()
 			close(resultCh)
 		}()
 
-		// Collect results for this level
 		levelFailed := false
 		for result := range resultCh {
 			allResults = append(allResults, result)
@@ -275,14 +296,12 @@ func runParallel(ctx context.Context, manager *agent.Manager, agents []string) (
 			}
 		}
 
-		// Check context cancellation
 		select {
 		case <-ctx.Done():
 			return allResults, ctx.Err()
 		default:
 		}
 
-		// Stop if any agent in this level failed (dependencies for next level won't be satisfied)
 		if levelFailed {
 			logError("Level %d had failures, stopping execution", levelIdx+1)
 			return allResults, fmt.Errorf("agents in level %d failed", levelIdx+1)
@@ -293,7 +312,6 @@ func runParallel(ctx context.Context, manager *agent.Manager, agents []string) (
 }
 
 func runSequential(ctx context.Context, manager *agent.Manager, agents []string) ([]agent.Result, error) {
-	// Topological sort based on dependencies
 	sorted := manager.TopologicalSort(agents)
 	results := make([]agent.Result, 0, len(sorted))
 

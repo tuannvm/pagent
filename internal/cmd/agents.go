@@ -1,49 +1,71 @@
 package cmd
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"text/tabwriter"
 
-	"github.com/spf13/cobra"
 	"github.com/tuannvm/pagent/internal/config"
 )
 
-var agentsCmd = &cobra.Command{
-	Use:   "agents",
-	Short: "Manage agent definitions",
-	Long:  `List and show agent definitions.`,
+func agentsMain(args []string) error {
+	if len(args) == 0 {
+		printAgentsUsage()
+		return nil
+	}
+
+	subcmd := args[0]
+	switch subcmd {
+	case "list":
+		return agentsListMain(args[1:])
+	case "show":
+		return agentsShowMain(args[1:])
+	case "-h", "-help", "help":
+		printAgentsUsage()
+		return nil
+	default:
+		printAgentsUsage()
+		return fmt.Errorf("unknown agents subcommand: %s", subcmd)
+	}
 }
 
-var agentsListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List available agents",
-	Long: `List all available agent types with their output files.
+func printAgentsUsage() {
+	fmt.Print(`Usage: pagent agents <command>
 
-Example:
-  pagent agents list`,
-	RunE: agentsListCommand,
+Manage agent definitions.
+
+Commands:
+  list    List available agents
+  show    Show agent prompt template
+
+Examples:
+  pagent agents list
+  pagent agents show architect
+`)
 }
 
-var agentsShowCmd = &cobra.Command{
-	Use:   "show <agent>",
-	Short: "Show agent prompt template",
-	Long: `Show the prompt template for a specific agent.
+func agentsListMain(args []string) error {
+	fs := flag.NewFlagSet("agents list", flag.ContinueOnError)
+	var configPath string
+	fs.StringVar(&configPath, "c", "", "config file path")
+	fs.StringVar(&configPath, "config", "", "config file path")
+	parseGlobalFlags(fs)
 
-Example:
-  pagent agents show design
-  pagent agents show tech`,
-	Args: cobra.ExactArgs(1),
-	RunE: agentsShowCommand,
-}
+	fs.Usage = func() {
+		fmt.Print(`Usage: pagent agents list [flags]
 
-func init() {
-	rootCmd.AddCommand(agentsCmd)
-	agentsCmd.AddCommand(agentsListCmd)
-	agentsCmd.AddCommand(agentsShowCmd)
-}
+List all available agent types with their output files.
 
-func agentsListCommand(cmd *cobra.Command, args []string) error {
+Flags:
+  -c, -config string    Config file path
+`)
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		cfg = config.Default()
@@ -53,40 +75,72 @@ func agentsListCommand(cmd *cobra.Command, args []string) error {
 	_, _ = fmt.Fprintln(w, "AGENT\tOUTPUT\tDEPENDS ON")
 
 	for _, name := range cfg.GetAgentNames() {
-		agent := cfg.Agents[name]
+		agentCfg := cfg.Agents[name]
 		deps := "-"
-		if len(agent.DependsOn) > 0 {
-			deps = fmt.Sprintf("%v", agent.DependsOn)
+		if len(agentCfg.DependsOn) > 0 {
+			deps = fmt.Sprintf("%v", agentCfg.DependsOn)
 		}
-		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", name, agent.Output, deps)
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", name, agentCfg.Output, deps)
 	}
 
 	_ = w.Flush()
 	return nil
 }
 
-func agentsShowCommand(cmd *cobra.Command, args []string) error {
-	agentName := args[0]
+func agentsShowMain(args []string) error {
+	fs := flag.NewFlagSet("agents show", flag.ContinueOnError)
+	var configPath string
+	fs.StringVar(&configPath, "c", "", "config file path")
+	fs.StringVar(&configPath, "config", "", "config file path")
+	parseGlobalFlags(fs)
+
+	fs.Usage = func() {
+		fmt.Print(`Usage: pagent agents show <agent> [flags]
+
+Show the prompt template for a specific agent.
+
+Arguments:
+  <agent>    Name of the agent
+
+Flags:
+  -c, -config string    Config file path
+
+Examples:
+  pagent agents show architect
+  pagent agents show implementer
+`)
+	}
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	if fs.NArg() < 1 {
+		fs.Usage()
+		return fmt.Errorf("missing required argument: agent name")
+	}
+
+	agentName := fs.Arg(0)
 
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		cfg = config.Default()
 	}
 
-	agent, ok := cfg.Agents[agentName]
+	agentCfg, ok := cfg.Agents[agentName]
 	if !ok {
 		return fmt.Errorf("unknown agent: %s (use 'pagent agents list' to see available agents)", agentName)
 	}
 
 	fmt.Printf("Agent: %s\n", agentName)
-	fmt.Printf("Output: %s\n", agent.Output)
-	if len(agent.DependsOn) > 0 {
-		fmt.Printf("Depends on: %v\n", agent.DependsOn)
+	fmt.Printf("Output: %s\n", agentCfg.Output)
+	if len(agentCfg.DependsOn) > 0 {
+		fmt.Printf("Depends on: %v\n", agentCfg.DependsOn)
 	}
 	fmt.Println()
 	fmt.Println("Prompt Template:")
 	fmt.Println("----------------")
-	fmt.Println(agent.Prompt)
+	fmt.Println(agentCfg.Prompt)
 
 	return nil
 }

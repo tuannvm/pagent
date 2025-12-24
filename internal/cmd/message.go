@@ -1,37 +1,49 @@
 package cmd
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/tuannvm/pagent/internal/agent"
 	"github.com/tuannvm/pagent/internal/api"
 )
 
-var messageCmd = &cobra.Command{
-	Use:   "message <agent> <message>",
-	Short: "Send a message to an agent",
-	Long: `Send a message to a specific agent when it's in stable (idle) state.
+func messageMain(args []string) error {
+	fs := flag.NewFlagSet("message", flag.ContinueOnError)
+	parseGlobalFlags(fs)
+
+	fs.Usage = func() {
+		fmt.Print(`Usage: pagent message <agent> <message>
+
+Send a message to a specific agent when it's in stable (idle) state.
 
 The command will wait for the agent to become stable before sending.
 Use this to provide guidance or additional instructions.
 
-Example:
+Arguments:
+  <agent>      Name of the agent
+  <message>    Message to send (quote if contains spaces)
+
+Examples:
   pagent message design "Focus more on mobile UX"
-  pagent message tech "Use REST, not GraphQL"`,
-	Args: cobra.ExactArgs(2),
-	RunE: messageCommand,
-}
+  pagent message tech "Use REST, not GraphQL"
+`)
+	}
 
-func init() {
-	rootCmd.AddCommand(messageCmd)
-}
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 
-func messageCommand(cmd *cobra.Command, args []string) error {
-	agentName := args[0]
-	message := args[1]
+	if fs.NArg() < 2 {
+		fs.Usage()
+		return fmt.Errorf("missing required arguments: agent name and message")
+	}
+
+	agentName := fs.Arg(0)
+	message := strings.Join(fs.Args()[1:], " ")
 
 	// Read state file
 	state, err := agent.LoadState()

@@ -1,33 +1,33 @@
 package cmd
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/spf13/cobra"
 	"github.com/tuannvm/pagent/internal/config"
 	"gopkg.in/yaml.v3"
 )
 
-var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Initialize pagent configuration",
-	Long: `Create a .pagent/config.yaml file in the current directory
+func initMain(args []string) error {
+	fs := flag.NewFlagSet("init", flag.ContinueOnError)
+	parseGlobalFlags(fs)
+
+	fs.Usage = func() {
+		fmt.Print(`Usage: pagent init
+
+Create a .pagent/config.yaml file in the current directory
 with default agent configurations.
 
 You can customize the prompts and settings after initialization.
+`)
+	}
 
-Example:
-  pagent init`,
-	RunE: initCommand,
-}
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 
-func init() {
-	rootCmd.AddCommand(initCmd)
-}
-
-func initCommand(cmd *cobra.Command, args []string) error {
 	configDir := ".pagent"
 	configFile := filepath.Join(configDir, "config.yaml")
 

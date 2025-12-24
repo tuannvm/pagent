@@ -1,33 +1,33 @@
 package cmd
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"text/tabwriter"
 
-	"github.com/spf13/cobra"
 	"github.com/tuannvm/pagent/internal/agent"
 	"github.com/tuannvm/pagent/internal/api"
 )
 
-var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Check status of running agents",
-	Long: `Check the status of all running agents.
+func statusMain(args []string) error {
+	fs := flag.NewFlagSet("status", flag.ContinueOnError)
+	parseGlobalFlags(fs)
+
+	fs.Usage = func() {
+		fmt.Print(`Usage: pagent status
+
+Check the status of all running agents.
 
 Shows each agent's current state (running/stable/not running)
 and port number.
+`)
+	}
 
-Example:
-  pagent status`,
-	RunE: statusCommand,
-}
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 
-func init() {
-	rootCmd.AddCommand(statusCmd)
-}
-
-func statusCommand(cmd *cobra.Command, args []string) error {
 	// Read state file to find running agents
 	state, err := agent.LoadState()
 	if err != nil {
@@ -62,4 +62,3 @@ func statusCommand(cmd *cobra.Command, args []string) error {
 	_ = w.Flush()
 	return nil
 }
-

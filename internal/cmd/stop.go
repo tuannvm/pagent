@@ -1,38 +1,46 @@
 package cmd
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/tuannvm/pagent/internal/agent"
 )
 
-var (
-	stopAll bool
-)
+func stopMain(args []string) error {
+	fs := flag.NewFlagSet("stop", flag.ContinueOnError)
+	var stopAll bool
+	fs.BoolVar(&stopAll, "a", false, "stop all agents")
+	fs.BoolVar(&stopAll, "all", false, "stop all agents")
+	parseGlobalFlags(fs)
 
-var stopCmd = &cobra.Command{
-	Use:   "stop [agent]",
-	Short: "Stop running agents",
-	Long: `Stop one or all running agents.
+	fs.Usage = func() {
+		fmt.Print(`Usage: pagent stop [agent] [flags]
+
+Stop one or all running agents.
+
+Arguments:
+  [agent]    Name of the agent to stop (optional if using -all)
+
+Flags:
+  -a, -all    Stop all agents
 
 Examples:
-  pagent stop tech         # Stop specific agent
-  pagent stop --all        # Stop all agents`,
-	RunE: stopCommand,
-}
+  pagent stop tech
+  pagent stop -all
+`)
+	}
 
-func init() {
-	rootCmd.AddCommand(stopCmd)
-	stopCmd.Flags().BoolVarP(&stopAll, "all", "a", false, "stop all agents")
-}
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 
-func stopCommand(cmd *cobra.Command, args []string) error {
-	if !stopAll && len(args) == 0 {
-		return fmt.Errorf("specify an agent name or use --all")
+	if !stopAll && fs.NArg() == 0 {
+		fs.Usage()
+		return fmt.Errorf("specify an agent name or use -all")
 	}
 
 	// Read state file
@@ -57,7 +65,7 @@ func stopCommand(cmd *cobra.Command, args []string) error {
 		agent.ClearState()
 		logInfo("All agents stopped")
 	} else {
-		agentName := args[0]
+		agentName := fs.Arg(0)
 		port, ok := state[agentName]
 		if !ok {
 			return fmt.Errorf("agent '%s' not found", agentName)
@@ -71,11 +79,8 @@ func stopCommand(cmd *cobra.Command, args []string) error {
 }
 
 func stopAgentByPort(name string, port int) {
-	// Find process by port using lsof (macOS/Linux)
-	// This is a best-effort approach since we don't have direct process control
 	logVerbose("Attempting to stop agent %s on port %d", name, port)
 
-	// First find the PID(s) - lsof may return multiple PIDs, one per line
 	out, err := exec.Command("lsof", "-ti", fmt.Sprintf(":%d", port)).Output()
 	if err != nil {
 		logVerbose("Could not find process for agent %s on port %d: %v", name, port, err)
@@ -88,7 +93,6 @@ func stopAgentByPort(name string, port int) {
 		return
 	}
 
-	// Split by newline in case there are multiple PIDs
 	pids := strings.Split(pidStr, "\n")
 	for _, pid := range pids {
 		pid = strings.TrimSpace(pid)
