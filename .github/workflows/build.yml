@@ -18,6 +18,7 @@ permissions:
   packages: write
   id-token: write
   security-events: write
+  actions: read  # Required for SARIF upload on private repos
   pull-requests: read
   checks: write
 
@@ -101,8 +102,9 @@ jobs:
           timeout: "10m"
 
       - name: Upload security scan results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always() && hashFiles('trivy-results.sarif') != ''
+        continue-on-error: true  # May fail on forks or repos without Advanced Security
         with:
           sarif_file: "trivy-results.sarif"
 
