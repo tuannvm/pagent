@@ -1,0 +1,48 @@
+# Binaries
+/pagent
+bin/
+dist/
+
+# Output directory
+outputs-*/
+outputs/
+
+# OS files
+.DS_Store
+*.swp
+*.swo
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# Coverage
+coverage.txt
+coverage.html
+
+# Temp files
+*.tmp
+*.temp
+.pagent/
+
+# Logs
+*.log
+
+# GoReleaser
+dist/
+
+# Debug
+debug
+*.prof
