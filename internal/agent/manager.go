@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/tuannvm/pm-agent-workflow/internal/api"
@@ -35,12 +33,12 @@ type Result struct {
 	Duration   time.Duration
 }
 
-// RunningAgent tracks a running agent process
+// RunningAgent tracks a running agent
 type RunningAgent struct {
-	Name    string
-	Port    int
-	Process *exec.Cmd
-	Client  *api.Client
+	Name      string
+	Port      int
+	Client    *api.Client // HTTP client for status polling
+	LibClient *LibClient  // Library client for agent management
 	StartedAt time.Time
 }
 
@@ -123,13 +121,17 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 
 	// Determine output path based on agent type and mode
 	// Spec outputs (architect, qa, security) go to SpecsOutputDir
-	// Code outputs (implementer, verifier) go to CodeOutputDir (or TargetCodebase in modify mode)
+	// Code outputs (implementer, verifier) go to CodeOutputDir in modify mode,
+	// but in create mode, the agent output already includes the code/ prefix
 	var outputPath string
 	if isSpecAgent(name) {
 		outputPath = filepath.Join(m.config.GetEffectiveSpecsOutputDir(), agentCfg.Output)
-	} else if isCodeAgent(name) {
+	} else if isCodeAgent(name) && m.config.IsModifyMode() {
+		// In modify mode, code goes to target codebase
 		outputPath = filepath.Join(m.config.GetEffectiveCodeOutputDir(), agentCfg.Output)
 	} else {
+		// In create mode or for non-code agents, use OutputDir directly
+		// (agent output like "code/.complete" already has the code/ prefix)
 		outputPath = filepath.Join(m.config.OutputDir, agentCfg.Output)
 	}
 	absOutputPath, _ := filepath.Abs(outputPath)
@@ -299,158 +301,6 @@ func (m *Manager) RunAgent(ctx context.Context, name string) Result {
 	}
 }
 
-// spawnAgent starts an AgentAPI process
-func (m *Manager) spawnAgent(ctx context.Context, name string, port int) (*RunningAgent, error) {
-	// Check if agentapi is available
-	agentapiPath, err := exec.LookPath("agentapi")
-	if err != nil {
-		return nil, fmt.Errorf("agentapi not found in PATH: %w", err)
-	}
-
-	// Build command: agentapi server --port <port> -- claude
-	cmd := exec.CommandContext(ctx, agentapiPath, "server", "--port", fmt.Sprintf("%d", port), "--", "claude")
-
-	// Set process group so we can kill all children
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
-	// Capture stdout/stderr for debugging
-	if m.verbose {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-	}
-
-	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("failed to start agentapi: %w", err)
-	}
-
-	return &RunningAgent{
-		Name:      name,
-		Port:      port,
-		Process:   cmd,
-		Client:    api.NewClient(port),
-		StartedAt: time.Now(),
-	}, nil
-}
-
-// waitForCompletion waits for agent to finish processing
-func (m *Manager) waitForCompletion(ctx context.Context, agent *RunningAgent, timeout time.Duration) error {
-	start := time.Now()
-	wasRunning := false
-	lastStatus := ""
-	lastProgressLog := time.Now()
-	pollInterval := 1 * time.Second
-	consecutiveErrors := 0
-	maxConsecutiveErrors := 30 // 30 consecutive failures (~30s) indicates dead agent
-
-	for {
-		// Check timeout (0 = no timeout, poll indefinitely)
-		if timeout > 0 && time.Since(start) > timeout {
-			return fmt.Errorf("timeout waiting for agent to complete")
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		status, err := agent.Client.GetStatus()
-		if err != nil {
-			consecutiveErrors++
-			if consecutiveErrors >= maxConsecutiveErrors {
-				return fmt.Errorf("agent API unreachable after %d consecutive failures - process likely crashed", consecutiveErrors)
-			}
-			if m.verbose && consecutiveErrors%10 == 0 {
-				fmt.Printf("[DEBUG] Agent %s API error (attempt %d/%d): %v\n",
-					agent.Name, consecutiveErrors, maxConsecutiveErrors, err)
-			}
-			time.Sleep(pollInterval)
-			continue
-		}
-		consecutiveErrors = 0 // Reset on successful API call
-
-		// Track status transitions
-		if status.Status != lastStatus {
-			if m.verbose {
-				fmt.Printf("[DEBUG] Agent %s status: %s (elapsed: %s)\n",
-					agent.Name, status.Status, time.Since(start).Round(time.Second))
-			}
-			lastStatus = status.Status
-		}
-
-		if status.Status == "running" {
-			wasRunning = true
-		}
-
-		// Agent is done when it transitions from running to stable
-		if wasRunning && status.Status == "stable" {
-			if m.verbose {
-				fmt.Printf("[DEBUG] Agent %s completed in %s\n",
-					agent.Name, time.Since(start).Round(time.Second))
-			}
-			return nil
-		}
-
-		// Progress indicator every 30 seconds
-		if m.verbose && time.Since(lastProgressLog) > 30*time.Second {
-			fmt.Printf("[DEBUG] Agent %s still %s... (elapsed: %s)\n",
-				agent.Name, status.Status, time.Since(start).Round(time.Second))
-			lastProgressLog = time.Now()
-		}
-
-		time.Sleep(pollInterval)
-	}
-}
-
-// stopAgent gracefully stops an agent
-func (m *Manager) stopAgent(name string) {
-	m.mu.Lock()
-	agent, ok := m.agents[name]
-	if !ok {
-		m.mu.Unlock()
-		return
-	}
-	delete(m.agents, name)
-	m.mu.Unlock()
-
-	if agent.Process != nil && agent.Process.Process != nil {
-		// Kill the process group
-		pgid, err := syscall.Getpgid(agent.Process.Process.Pid)
-		if err == nil {
-			_ = syscall.Kill(-pgid, syscall.SIGTERM)
-		} else {
-			_ = agent.Process.Process.Kill()
-		}
-		_ = agent.Process.Wait()
-	}
-}
-
-// StopAll stops all running agents
-func (m *Manager) StopAll() {
-	m.mu.Lock()
-	names := make([]string, 0, len(m.agents))
-	for name := range m.agents {
-		names = append(names, name)
-	}
-	m.mu.Unlock()
-
-	for _, name := range names {
-		m.stopAgent(name)
-	}
-}
-
-// GetRunningAgents returns currently running agents
-func (m *Manager) GetRunningAgents() []*RunningAgent {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	agents := make([]*RunningAgent, 0, len(m.agents))
-	for _, agent := range m.agents {
-		agents = append(agents, agent)
-	}
-	return agents
-}
-
 // allocatePort returns the next available port
 func (m *Manager) allocatePort() int {
 	m.mu.Lock()
@@ -496,135 +346,6 @@ func LoadState() (map[string]int, error) {
 	}
 
 	return state, nil
-}
-
-// TopologicalSort returns agents in dependency order
-func (m *Manager) TopologicalSort(agents []string) []string {
-	levels := m.GetDependencyLevels(agents)
-	var result []string
-	for _, level := range levels {
-		result = append(result, level...)
-	}
-	return result
-}
-
-// GetDependencyLevels groups agents by dependency level for parallel execution.
-// Level 0: agents with no dependencies
-// Level 1: agents whose dependencies are all in level 0
-// Level N: agents whose dependencies are all in levels 0..N-1
-// Returns a slice of levels, where each level is a slice of agent names.
-func (m *Manager) GetDependencyLevels(agents []string) [][]string {
-	// Build agent set for filtering
-	agentSet := make(map[string]bool)
-	for _, a := range agents {
-		agentSet[a] = true
-	}
-
-	// Calculate in-degree for each agent (only counting dependencies in our set)
-	inDegree := make(map[string]int)
-	for _, a := range agents {
-		inDegree[a] = 0
-		deps := m.config.GetDependencies(a)
-		for _, dep := range deps {
-			if agentSet[dep] {
-				inDegree[a]++
-			}
-		}
-	}
-
-	// Track which agents have been assigned to a level
-	assigned := make(map[string]bool)
-	var levels [][]string
-
-	// Keep building levels until all agents are assigned
-	for len(assigned) < len(agents) {
-		var currentLevel []string
-
-		// Find all agents whose dependencies are satisfied (in-degree == 0)
-		for _, a := range agents {
-			if !assigned[a] && inDegree[a] == 0 {
-				currentLevel = append(currentLevel, a)
-			}
-		}
-
-		// If no agents can be added, we have a cycle (shouldn't happen with valid config)
-		if len(currentLevel) == 0 {
-			break
-		}
-
-		// Mark agents in this level as assigned
-		for _, a := range currentLevel {
-			assigned[a] = true
-		}
-
-		// Reduce in-degree for agents that depend on this level
-		for _, completed := range currentLevel {
-			for _, a := range agents {
-				if assigned[a] {
-					continue
-				}
-				deps := m.config.GetDependencies(a)
-				for _, dep := range deps {
-					if dep == completed {
-						inDegree[a]--
-					}
-				}
-			}
-		}
-
-		levels = append(levels, currentLevel)
-	}
-
-	return levels
-}
-
-// GetTransitiveDependencies returns all dependencies for an agent, including transitive ones.
-// This is useful for auto-including required agents when a user requests a specific agent.
-func (m *Manager) GetTransitiveDependencies(agentName string) []string {
-	visited := make(map[string]bool)
-	var result []string
-
-	var visit func(name string)
-	visit = func(name string) {
-		if visited[name] {
-			return
-		}
-		visited[name] = true
-
-		deps := m.config.GetDependencies(name)
-		for _, dep := range deps {
-			visit(dep)
-		}
-		// Add after visiting dependencies (reverse topological order)
-		if name != agentName { // Don't include the agent itself
-			result = append(result, name)
-		}
-	}
-
-	visit(agentName)
-	return result
-}
-
-// ExpandWithDependencies takes a list of agents and returns the list expanded
-// to include all transitive dependencies. The returned list is in dependency order.
-func (m *Manager) ExpandWithDependencies(agents []string) []string {
-	// Collect all agents including dependencies
-	agentSet := make(map[string]bool)
-	for _, a := range agents {
-		agentSet[a] = true
-		for _, dep := range m.GetTransitiveDependencies(a) {
-			agentSet[dep] = true
-		}
-	}
-
-	// Convert to slice
-	var allAgents []string
-	for a := range agentSet {
-		allAgents = append(allAgents, a)
-	}
-
-	// Return in topological order
-	return m.TopologicalSort(allAgents)
 }
 
 // isSpecAgent returns true if the agent produces specification documents

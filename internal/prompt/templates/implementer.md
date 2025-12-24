@@ -453,4 +453,11 @@ Create documentation appropriate for the persona:
 - Proper error handling and HTTP status codes
 - **Create README.md and docs/ folder as specified above**
 
-Write completion marker to {{.OutputPath}} when done.
+## Completion
+
+When implementation is COMPLETE, you MUST create the completion marker file:
+```bash
+touch {{.OutputPath}}
+```
+
+This marker file signals that you have finished implementing all requirements.

@@ -256,4 +256,11 @@ Create/update {{.OutputDir}}/verification-report.md with:
 
 List any discrepancies found.
 
-Write completion marker to {{.OutputPath}} when done.
+## Completion
+
+When verification is COMPLETE, you MUST create the completion marker file:
+```bash
+touch {{.OutputPath}}
+```
+
+This marker file signals that you have finished verifying all requirements.

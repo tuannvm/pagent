@@ -192,6 +192,22 @@ func Load(path string) (*Config, error) {
 		}
 	}
 
+	// Apply default agents if none specified
+	if len(cfg.Agents) == 0 {
+		cfg.Agents = Default().Agents
+	}
+
+	// Apply default stack if not specified
+	if cfg.Stack.Cloud == "" {
+		cfg.Stack = DefaultStack()
+	}
+
+	// Apply default preferences where not specified
+	defaultPrefs := DefaultPreferences()
+	if cfg.Preferences.Language == "" {
+		cfg.Preferences.Language = defaultPrefs.Language
+	}
+
 	// Apply environment variable overrides
 	cfg.ApplyEnvOverrides()
 
@@ -229,11 +245,11 @@ func DefaultStack() TechStack {
 func Default() *Config {
 	return &Config{
 		OutputDir:   "./outputs",
-		Timeout:     0,                    // 0 = no timeout (poll until completion). Set via --timeout for safety net.
-		Persona:     PersonaBalanced,      // Default to pragmatic middle-ground
-		Mode:        ModeCreate,           // Default to creating new codebase
-		Stack:       DefaultStack(),       // Default technology stack
-		Preferences: DefaultPreferences(), // Default architecture preferences
+		Timeout:     0,               // 0 = no timeout (poll until completion). Set via --timeout for safety net.
+		Persona:     PersonaBalanced, // Default to pragmatic middle-ground
+		Mode:        ModeCreate,      // Default to creating new codebase
+		Stack:       DefaultStack(),
+		Preferences: DefaultPreferences(),
 		PostProcessing: PostProcessingConfig{
 			GenerateDiffSummary:   false,
 			GeneratePRDescription: false,
