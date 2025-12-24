@@ -15,15 +15,14 @@ linters:
       - linters:
           - errcheck
         path: "(.+)_test\\.go"
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    exclude-functions:
-      - (io.Closer).Close
-  govet:
-    enable-all: true
-  gocyclo:
-    min-complexity: 15
-  misspell:
-    locale: US
+  settings:
+    errcheck:
+      check-type-assertions: true
+      exclude-functions:
+        - (io.Closer).Close
+    govet:
+      enable-all: true
+    gocyclo:
+      min-complexity: 15
+    misspell:
+      locale: US

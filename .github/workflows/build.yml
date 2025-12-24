@@ -60,7 +60,7 @@ jobs:
       - name: Install golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
+          version: v2.7.2
           args: --timeout=5m
           install-mode: binary
           skip-cache: true
