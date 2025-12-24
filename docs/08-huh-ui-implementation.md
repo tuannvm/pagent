@@ -11,14 +11,14 @@
 ```
 internal/
 ├── cmd/
-│   ├── cli.go           # Main dispatcher (add --accessible flag)
-│   ├── init.go          # init command (add huh form)
-│   ├── run.go           # run command (add huh prompts)
+│   ├── cli.go           # Add "ui" case to command switch
+│   ├── ui.go            # NEW: ui command entry point
 │   └── ...
 └── tui/                  # NEW: TUI components
-    ├── forms.go          # Reusable form builders
-    ├── theme.go          # Custom theme
-    └── prompts.go        # Confirmation dialogs
+    ├── dashboard.go      # Main single-screen form
+    ├── theme.go          # Gum-like styling
+    ├── fields.go         # Custom field helpers
+    └── files.go          # File discovery utilities
 ```
 
 ## Implementation Tasks
@@ -27,6 +27,8 @@ internal/
 
 ```bash
 go get github.com/charmbracelet/huh/v2@latest
+go get github.com/charmbracelet/lipgloss@latest
+go get golang.org/x/term@latest
 ```
 
 ### Task 2: Create TUI Package
@@ -37,515 +39,694 @@ go get github.com/charmbracelet/huh/v2@latest
 package tui
 
 import (
-	"github.com/charmbracelet/huh/v2"
+	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 )
 
-// PagentTheme returns a custom theme for pagent forms
-func PagentTheme() *huh.Theme {
-	t := huh.ThemeBase()
+// Colors matching gum's aesthetic
+var (
+	ColorPrimary   = lipgloss.Color("212") // Bright magenta
+	ColorSecondary = lipgloss.Color("39")  // Cyan
+	ColorMuted     = lipgloss.Color("241") // Gray
+	ColorSuccess   = lipgloss.Color("42")  // Green
+)
 
-	// Customize colors
-	t.Focused.Title = t.Focused.Title.Foreground(lipgloss.Color("39"))  // Cyan
-	t.Focused.SelectedOption = t.Focused.SelectedOption.Foreground(lipgloss.Color("42"))  // Green
+// PagentTheme returns a gum-inspired theme
+func PagentTheme() *huh.Theme {
+	t := huh.ThemeCharm()
+
+	// Title styling
+	t.Focused.Title = t.Focused.Title.
+		Foreground(ColorPrimary).
+		Bold(true)
+
+	// Selected option
+	t.Focused.SelectedOption = t.Focused.SelectedOption.
+		Foreground(ColorSuccess)
+
+	// Description text
+	t.Focused.Description = t.Focused.Description.
+		Foreground(ColorMuted)
 
 	return t
 }
+
+// HeaderStyle returns styled header for the dashboard
+func HeaderStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		Bold(true).
+		Foreground(ColorPrimary).
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderBottom(true).
+		BorderForeground(ColorMuted).
+		Padding(0, 1).
+		MarginBottom(1)
+}
 ```
 
-#### `internal/tui/forms.go`
+#### `internal/tui/files.go`
 
 ```go
 package tui
 
 import (
-	"github.com/charmbracelet/huh/v2"
-	"github.com/tuannvm/pagent/internal/config"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 )
 
-// InitForm creates the interactive init configuration form
-func InitForm(cfg *config.Config) *huh.Form {
-	return huh.NewForm(
-		// Page 1: Basic Settings
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Implementation Persona").
-				Description("How comprehensive should the output be?").
-				Options(
-					huh.NewOption("Minimal - MVP focus, lean output", "minimal"),
-					huh.NewOption("Balanced - Standard implementation", "balanced"),
-					huh.NewOption("Production - Enterprise-ready, comprehensive", "production"),
-				).
-				Value(&cfg.Persona),
+// DiscoverInputFiles finds potential input files in the current directory
+func DiscoverInputFiles() []string {
+	patterns := []string{
+		"*.md",
+		"*.yaml",
+		"*.yml",
+		"prd*",
+		"PRD*",
+		"requirements*",
+	}
 
-			huh.NewSelect[string]().
-				Title("Primary Language").
-				Options(
-					huh.NewOption("Go", "go"),
-					huh.NewOption("Python", "python"),
-					huh.NewOption("TypeScript", "typescript"),
-					huh.NewOption("Rust", "rust"),
-					huh.NewOption("Java", "java"),
-				).
-				Value(&cfg.Preferences.Language),
-		),
+	fileSet := make(map[string]os.FileInfo)
 
-		// Page 2: Stack Configuration
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Cloud Provider").
-				Options(
-					huh.NewOption("AWS", "aws"),
-					huh.NewOption("GCP", "gcp"),
-					huh.NewOption("Azure", "azure"),
-					huh.NewOption("None", "none"),
-				).
-				Value(&cfg.Stack.Cloud),
+	for _, pattern := range patterns {
+		matches, _ := filepath.Glob(pattern)
+		for _, m := range matches {
+			if info, err := os.Stat(m); err == nil && !info.IsDir() {
+				fileSet[m] = info
+			}
+		}
+	}
 
-			huh.NewSelect[string]().
-				Title("Compute Platform").
-				Options(
-					huh.NewOption("Kubernetes", "kubernetes"),
-					huh.NewOption("ECS", "ecs"),
-					huh.NewOption("Lambda/Serverless", "serverless"),
-					huh.NewOption("VMs", "vm"),
-					huh.NewOption("GitHub Actions", "github-actions"),
-					huh.NewOption("None", "none"),
-				).
-				Value(&cfg.Stack.Compute),
+	// Also check common subdirectories
+	subdirs := []string{"docs", "examples", "specs"}
+	for _, dir := range subdirs {
+		for _, pattern := range patterns {
+			matches, _ := filepath.Glob(filepath.Join(dir, pattern))
+			for _, m := range matches {
+				if info, err := os.Stat(m); err == nil && !info.IsDir() {
+					fileSet[m] = info
+				}
+			}
+		}
+	}
 
-			huh.NewSelect[string]().
-				Title("Database").
-				Options(
-					huh.NewOption("PostgreSQL", "postgres"),
-					huh.NewOption("MySQL", "mysql"),
-					huh.NewOption("MongoDB", "mongodb"),
-					huh.NewOption("DynamoDB", "dynamodb"),
-					huh.NewOption("None (Stateless)", "none"),
-				).
-				Value(&cfg.Stack.Database),
-		),
+	// Convert to slice and sort by modification time (recent first)
+	type fileWithTime struct {
+		path    string
+		modTime int64
+	}
+	var files []fileWithTime
+	for path, info := range fileSet {
+		files = append(files, fileWithTime{path, info.ModTime().Unix()})
+	}
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].modTime > files[j].modTime
+	})
 
-		// Page 3: Agent Selection
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("Agents to Enable").
-				Description("Select which specialist agents to run").
-				Options(
-					huh.NewOption("Architect - System design & API specs", "architect").Selected(true),
-					huh.NewOption("Implementer - Code generation", "implementer").Selected(true),
-					huh.NewOption("QA - Test plans & test code", "qa").Selected(true),
-					huh.NewOption("Security - Security assessment", "security").Selected(true),
-					huh.NewOption("Verifier - Build & validation", "verifier").Selected(true),
-				).
-				Value(&cfg.EnabledAgents),
-		),
-	).WithTheme(PagentTheme())
+	// Return paths only, limit to 10
+	result := make([]string, 0, 10)
+	for i, f := range files {
+		if i >= 10 {
+			break
+		}
+		result = append(result, f.path)
+	}
+	return result
 }
 
-// InputSelectForm prompts for input file when not provided
-// Uses FilePicker for better UX, falls back to manual input
-func InputSelectForm(recentFiles []string, accessible bool) (string, error) {
-	var selected string
-
-	options := make([]huh.Option[string], 0, len(recentFiles)+1)
-	options = append(options, huh.NewOption("Browse files...", "__browse__"))
-	options = append(options, huh.NewOption("Enter path manually...", "__manual__"))
-	for _, f := range recentFiles {
-		options = append(options, huh.NewOption(f, f))
-	}
-
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Select input file").
-				Options(options...).
-				Value(&selected),
-		),
-	).WithTheme(PagentTheme()).
-		WithAccessible(accessible)
-
-	if err := form.Run(); err != nil {
-		return "", err
-	}
-
-	// Handle special selections
-	switch selected {
-	case "__browse__":
-		// Use FilePicker for browsing
-		var filepath string
-		picker := huh.NewForm(
-			huh.NewGroup(
-				huh.NewFilePicker().
-					Title("Select input file").
-					CurrentDirectory(".").
-					ShowHidden(false).
-					FileAllowed(true).
-					DirAllowed(true).
-					Value(&filepath),
-			),
-		).WithTheme(PagentTheme()).
-			WithAccessible(accessible)
-
-		if err := picker.Run(); err != nil {
-			return "", err
-		}
-		return filepath, nil
-
-	case "__manual__":
-		// Manual path entry
-		var path string
-		input := huh.NewForm(
-			huh.NewGroup(
-				huh.NewInput().
-					Title("Input file path").
-					Placeholder("./prd.md").
-					Value(&path),
-			),
-		).WithTheme(PagentTheme()).
-			WithAccessible(accessible)
-
-		if err := input.Run(); err != nil {
-			return "", err
-		}
-		return path, nil
-	}
-
-	return selected, nil
+// IsMarkdownOrYAML checks if file has supported extension
+func IsMarkdownOrYAML(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	return ext == ".md" || ext == ".yaml" || ext == ".yml"
 }
 ```
 
-#### `internal/tui/prompts.go`
+#### `internal/tui/dashboard.go`
 
 ```go
 package tui
 
-import "github.com/charmbracelet/huh/v2"
+import (
+	"errors"
+	"fmt"
+	"os"
+	"strings"
 
-// Confirm shows a yes/no confirmation dialog
-func Confirm(title, description string, accessible bool) (bool, error) {
-	var confirmed bool
+	"github.com/charmbracelet/huh"
+	"github.com/tuannvm/pagent/internal/config"
+	"golang.org/x/term"
+)
 
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewConfirm().
-				Title(title).
-				Description(description).
-				Affirmative("Yes").
-				Negative("No").
-				Value(&confirmed),
-		),
-	).WithTheme(PagentTheme()).
-		WithAccessible(accessible)
-
-	if err := form.Run(); err != nil {
-		return false, err
-	}
-
-	return confirmed, nil
+// DashboardResult contains the user's selections
+type DashboardResult struct {
+	InputPath    string
+	Agents       []string
+	AllAgents    bool
+	Persona      string
+	OutputDir    string
+	Sequential   bool
+	ResumeMode   string // "normal", "resume", "force"
+	Architecture string // "config", "stateless", "database"
+	Timeout      int
+	ConfigPath   string
+	Verbosity    string // "normal", "verbose", "quiet"
+	Cancelled    bool
 }
 
-// SelectAgents prompts user to select which agents to run
-func SelectAgents(available []string, accessible bool) ([]string, error) {
-	var selected []string
+// DashboardOptions configures the dashboard
+type DashboardOptions struct {
+	PrefilledInput string
+	Config         *config.Config
+	Accessible     bool
+}
 
-	options := make([]huh.Option[string], len(available))
-	for i, a := range available {
-		options[i] = huh.NewOption(a, a).Selected(true)
+// RunDashboard displays the interactive single-screen form
+func RunDashboard(opts DashboardOptions) (*DashboardResult, error) {
+	cfg := opts.Config
+	if cfg == nil {
+		cfg = config.Default()
 	}
 
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("Select agents to run").
-				Options(options...).
-				Value(&selected),
-		),
-	).WithTheme(PagentTheme()).
+	// Auto-enable accessible mode for non-terminals
+	accessible := opts.Accessible || !isTerminal()
+
+	// Initialize result with defaults from config
+	result := &DashboardResult{
+		InputPath:    opts.PrefilledInput,
+		AllAgents:    true,
+		Persona:      cfg.Persona,
+		OutputDir:    cfg.OutputDir,
+		Sequential:   false,
+		ResumeMode:   "normal",
+		Architecture: "config",
+		Timeout:      cfg.Timeout,
+		ConfigPath:   "",
+		Verbosity:    "normal",
+	}
+
+	// Discover input files if not pre-filled
+	var inputOptions []huh.Option[string]
+	if result.InputPath == "" {
+		files := DiscoverInputFiles()
+		for _, f := range files {
+			inputOptions = append(inputOptions, huh.NewOption(f, f))
+		}
+		inputOptions = append(inputOptions, huh.NewOption("Enter path manually...", "__manual__"))
+	}
+
+	// Build agent options from config
+	agentNames := cfg.GetAgentNames()
+	var agentOptions []huh.Option[string]
+	for _, name := range agentNames {
+		agentOptions = append(agentOptions, huh.NewOption(name, name).Selected(true))
+	}
+
+	// Track agent selection mode
+	var agentMode string = "all"
+
+	// Build the form
+	var formGroups []*huh.Group
+
+	// === Main Options Group ===
+	mainFields := []huh.Field{}
+
+	// Input field - select or text based on discovery
+	if len(inputOptions) > 0 && result.InputPath == "" {
+		mainFields = append(mainFields,
+			huh.NewSelect[string]().
+				Title("Input").
+				Description("Select PRD or input file").
+				Options(inputOptions...).
+				Value(&result.InputPath),
+		)
+	} else {
+		mainFields = append(mainFields,
+			huh.NewInput().
+				Title("Input").
+				Description("Path to PRD or input file").
+				Placeholder("./prd.md").
+				Value(&result.InputPath),
+		)
+	}
+
+	// Agent selection mode
+	mainFields = append(mainFields,
+		huh.NewSelect[string]().
+			Title("Agents").
+			Options(
+				huh.NewOption("All agents", "all"),
+				huh.NewOption("Select specific agents...", "select"),
+			).
+			Value(&agentMode),
+	)
+
+	// Persona
+	mainFields = append(mainFields,
+		huh.NewSelect[string]().
+			Title("Persona").
+			Description("Implementation style").
+			Options(
+				huh.NewOption("Minimal - MVP focus", "minimal"),
+				huh.NewOption("Balanced - Standard implementation", "balanced"),
+				huh.NewOption("Production - Enterprise-ready", "production"),
+			).
+			Value(&result.Persona),
+	)
+
+	// Output directory
+	mainFields = append(mainFields,
+		huh.NewInput().
+			Title("Output").
+			Description("Output directory for generated files").
+			Placeholder("./outputs").
+			Value(&result.OutputDir),
+	)
+
+	formGroups = append(formGroups, huh.NewGroup(mainFields...))
+
+	// === Advanced Options Group ===
+	advancedFields := []huh.Field{
+		huh.NewSelect[string]().
+			Title("Execution").
+			Options(
+				huh.NewOption("Parallel (faster)", "parallel"),
+				huh.NewOption("Sequential (dependency order)", "sequential"),
+			).
+			Value(boolToString(&result.Sequential, "sequential", "parallel")),
+
+		huh.NewSelect[string]().
+			Title("Resume Mode").
+			Options(
+				huh.NewOption("Normal - regenerate all", "normal"),
+				huh.NewOption("Resume - skip up-to-date", "resume"),
+				huh.NewOption("Force - ignore existing", "force"),
+			).
+			Value(&result.ResumeMode),
+
+		huh.NewSelect[string]().
+			Title("Architecture").
+			Options(
+				huh.NewOption("From config", "config"),
+				huh.NewOption("Stateless", "stateless"),
+				huh.NewOption("Database-backed", "database"),
+			).
+			Value(&result.Architecture),
+
+		huh.NewInput().
+			Title("Timeout").
+			Description("Seconds per agent (0 = unlimited)").
+			Placeholder("0").
+			Value(intToString(&result.Timeout)),
+
+		huh.NewInput().
+			Title("Config").
+			Description("Custom config file path (optional)").
+			Placeholder(".pagent/config.yaml").
+			Value(&result.ConfigPath),
+
+		huh.NewSelect[string]().
+			Title("Verbosity").
+			Options(
+				huh.NewOption("Normal", "normal"),
+				huh.NewOption("Verbose", "verbose"),
+				huh.NewOption("Quiet", "quiet"),
+			).
+			Value(&result.Verbosity),
+	}
+
+	formGroups = append(formGroups, huh.NewGroup(advancedFields...).
+		Title("Advanced Options").
+		Description("Press Enter to skip with defaults"))
+
+	// === Confirmation Group ===
+	var confirmed bool
+	formGroups = append(formGroups, huh.NewGroup(
+		huh.NewConfirm().
+			Title("Run agents?").
+			Affirmative("Run").
+			Negative("Cancel").
+			Value(&confirmed),
+	))
+
+	// Create and run the form
+	form := huh.NewForm(formGroups...).
+		WithTheme(PagentTheme()).
 		WithAccessible(accessible)
 
-	if err := form.Run(); err != nil {
-		return nil, err
+	err := form.Run()
+	if err != nil {
+		if errors.Is(err, huh.ErrUserAborted) {
+			result.Cancelled = true
+			return result, nil
+		}
+		return nil, fmt.Errorf("form error: %w", err)
 	}
 
-	return selected, nil
+	if !confirmed {
+		result.Cancelled = true
+		return result, nil
+	}
+
+	// Handle manual input if selected
+	if result.InputPath == "__manual__" {
+		var manualPath string
+		manualForm := huh.NewForm(
+			huh.NewGroup(
+				huh.NewInput().
+					Title("Enter input file path").
+					Value(&manualPath),
+			),
+		).WithTheme(PagentTheme()).WithAccessible(accessible)
+
+		if err := manualForm.Run(); err != nil {
+			return nil, err
+		}
+		result.InputPath = manualPath
+	}
+
+	// Handle agent selection if "select" mode chosen
+	if agentMode == "select" {
+		result.AllAgents = false
+		agentForm := huh.NewForm(
+			huh.NewGroup(
+				huh.NewMultiSelect[string]().
+					Title("Select agents to run").
+					Options(agentOptions...).
+					Value(&result.Agents),
+			),
+		).WithTheme(PagentTheme()).WithAccessible(accessible)
+
+		if err := agentForm.Run(); err != nil {
+			return nil, err
+		}
+	} else {
+		result.AllAgents = true
+		result.Agents = agentNames
+	}
+
+	return result, nil
+}
+
+// isTerminal checks if stdout is a terminal
+func isTerminal() bool {
+	return term.IsTerminal(int(os.Stdout.Fd()))
+}
+
+// Helper to convert bool pointer to string value for select
+func boolToString(b *bool, trueVal, falseVal string) *string {
+	s := falseVal
+	if *b {
+		s = trueVal
+	}
+	return &s
+}
+
+// Helper to convert int to string for input
+func intToString(i *int) *string {
+	s := fmt.Sprintf("%d", *i)
+	return &s
 }
 ```
 
-### Task 3: Update `init` Command
+### Task 3: Add UI Command
 
-#### `internal/cmd/init.go` (Modified)
+#### `internal/cmd/ui.go`
 
 ```go
 package cmd
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
+	"strings"
 
-	"github.com/charmbracelet/huh/v2"
 	"github.com/tuannvm/pagent/internal/config"
 	"github.com/tuannvm/pagent/internal/tui"
-	"gopkg.in/yaml.v3"
 )
 
-func initMain(args []string) error {
-	fs := flag.NewFlagSet("init", flag.ContinueOnError)
-	parseGlobalFlags(fs)
+func uiMain(args []string) error {
+	fs := flag.NewFlagSet("ui", flag.ContinueOnError)
 
-	noInteractive := fs.Bool("no-interactive", false, "skip interactive prompts")
+	var accessible bool
+	fs.BoolVar(&accessible, "accessible", false, "enable accessible mode for screen readers")
+
+	fs.Usage = func() {
+		fmt.Print(`Usage: pagent ui [input] [flags]
+
+Launch interactive dashboard for running agents.
+
+Arguments:
+  [input]    Optional: pre-fill input file path
+
+Flags:
+  --accessible    Enable accessible mode for screen readers
+
+Examples:
+  pagent ui
+  pagent ui ./prd.md
+  pagent ui --accessible
+`)
+	}
 
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	configDir := ".pagent"
-	configFile := filepath.Join(configDir, "config.yaml")
-
-	// Check if already exists
-	if _, err := os.Stat(configFile); err == nil {
-		if !*noInteractive {
-			overwrite, err := tui.Confirm(
-				"Config already exists",
-				fmt.Sprintf("Overwrite %s?", configFile),
-				accessible,  // accessible mode changes rendering, not behavior
-			)
-			if err != nil || !overwrite {
-				return fmt.Errorf("config file already exists: %s", configFile)
-			}
-		} else {
-			return fmt.Errorf("config file already exists: %s", configFile)
-		}
-	}
-
-	// Get default config
-	cfg := config.Default()
-
-	// Run interactive form if not disabled
-	if !*noInteractive {
-		form := tui.InitForm(cfg).
-			WithAccessible(accessible)  // Set accessible mode from global flag
-		if err := form.Run(); err != nil {
-			if errors.Is(err, huh.ErrUserAborted) {
-				logInfo("Setup cancelled")
-				return nil
-			}
-			return fmt.Errorf("form error: %w", err)
-		}
-	}
-
-	// Create directory and write config
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	data, err := yaml.Marshal(cfg)
+	// Load config
+	cfg, err := config.Load("")
 	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
+		cfg = config.Default()
 	}
 
-	header := `# Pagent Configuration
-# Generated by pagent init
-# Documentation: https://github.com/tuannvm/pagent
-
-`
-	if err := os.WriteFile(configFile, []byte(header+string(data)), 0644); err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
+	// Pre-fill input if provided as argument
+	prefilledInput := ""
+	if fs.NArg() > 0 {
+		prefilledInput = fs.Arg(0)
 	}
 
-	logInfo("Created %s", configFile)
-	return nil
+	// Run the dashboard
+	result, err := tui.RunDashboard(tui.DashboardOptions{
+		PrefilledInput: prefilledInput,
+		Config:         cfg,
+		Accessible:     accessible,
+	})
+	if err != nil {
+		return err
+	}
+
+	if result.Cancelled {
+		logInfo("Cancelled")
+		return nil
+	}
+
+	// Validate input
+	if result.InputPath == "" {
+		return fmt.Errorf("no input file specified")
+	}
+
+	// Build args for runMain
+	runArgs := []string{result.InputPath}
+
+	if !result.AllAgents && len(result.Agents) > 0 {
+		runArgs = append(runArgs, "-a", strings.Join(result.Agents, ","))
+	}
+
+	if result.Persona != "" {
+		runArgs = append(runArgs, "-p", result.Persona)
+	}
+
+	if result.OutputDir != "" && result.OutputDir != "./outputs" {
+		runArgs = append(runArgs, "-o", result.OutputDir)
+	}
+
+	if result.Sequential {
+		runArgs = append(runArgs, "-s")
+	}
+
+	switch result.ResumeMode {
+	case "resume":
+		runArgs = append(runArgs, "-r")
+	case "force":
+		runArgs = append(runArgs, "-f")
+	}
+
+	switch result.Architecture {
+	case "stateless":
+		runArgs = append(runArgs, "--stateless")
+	case "database":
+		runArgs = append(runArgs, "--no-stateless")
+	}
+
+	if result.Timeout > 0 {
+		runArgs = append(runArgs, "-t", fmt.Sprintf("%d", result.Timeout))
+	}
+
+	if result.ConfigPath != "" {
+		runArgs = append(runArgs, "-c", result.ConfigPath)
+	}
+
+	switch result.Verbosity {
+	case "verbose":
+		runArgs = append(runArgs, "-v")
+	case "quiet":
+		runArgs = append(runArgs, "-q")
+	}
+
+	// Display what we're about to run
+	logInfo("Running: pagent run %s", strings.Join(runArgs, " "))
+	logInfo("")
+
+	// Execute run command
+	return runMain(runArgs)
 }
 ```
 
-### Task 4: Update `run` Command
+### Task 4: Update CLI Dispatcher
 
-Add these imports to `internal/cmd/run.go`:
-
-```go
-import (
-	"errors"
-	"path/filepath"
-	// ... existing imports ...
-	"github.com/charmbracelet/huh/v2"
-	"github.com/tuannvm/pagent/internal/tui"
-)
-```
-
-Add to `runMain` function after flag parsing:
+#### `internal/cmd/cli.go` (add to switch)
 
 ```go
-if fs.NArg() < 1 {
-	// No input provided - try interactive selection
-	if !noInteractive {
-		recentFiles := findRecentPRDFiles()  // helper to find .md files
-		selected, err := tui.InputSelectForm(recentFiles, accessible)
-		if err != nil {
-			if errors.Is(err, huh.ErrUserAborted) {
-				return nil
-			}
-			fs.Usage()
-			return fmt.Errorf("missing required argument: input file or directory")
-		}
-		inputPath = selected
-	} else {
-		fs.Usage()
-		return fmt.Errorf("missing required argument: input file or directory")
-	}
-}
-
-// Helper function to find recent PRD files
-func findRecentPRDFiles() []string {
-	var files []string
-	patterns := []string{"*.md", "*.yaml", "*.yml", "prd*", "PRD*"}
-
-	for _, pattern := range patterns {
-		matches, _ := filepath.Glob(pattern)
-		files = append(files, matches...)
-	}
-
-	// Deduplicate and limit to 5 most recent
-	seen := make(map[string]bool)
-	var unique []string
-	for _, f := range files {
-		if !seen[f] && len(unique) < 5 {
-			seen[f] = true
-			unique = append(unique, f)
-		}
-	}
-	return unique
+switch cmd {
+case "run":
+    return runMain(os.Args[2:])
+case "ui":                           // ADD THIS
+    return uiMain(os.Args[2:])       // ADD THIS
+case "init":
+    return initMain(os.Args[2:])
+// ... rest of cases
 }
 ```
 
-### Task 5: Add Global Flags for TUI Control
-
-Update `internal/cmd/cli.go`:
+Update `printUsage()`:
 
 ```go
-var (
-	verbose       bool
-	quiet         bool
-	noInteractive bool  // NEW: disable all interactive prompts
-	accessible    bool  // NEW: enable accessible mode for screen readers
-	version       = "dev"
-)
+func printUsage() {
+	fmt.Print(`Pagent - Orchestrate specialist agents from PRD
 
-func parseGlobalFlags(fs *flag.FlagSet) {
-	fs.BoolVar(&verbose, "v", false, "verbose output")
-	fs.BoolVar(&verbose, "verbose", false, "verbose output")
-	fs.BoolVar(&quiet, "q", false, "quiet output (errors only)")
-	fs.BoolVar(&quiet, "quiet", false, "quiet output (errors only)")
-	fs.BoolVar(&noInteractive, "no-interactive", false, "disable interactive prompts")  // NEW
-	fs.BoolVar(&accessible, "accessible", false, "enable accessible mode for screen readers")  // NEW
-}
-```
+Usage:
+  pagent <command> [flags] [args]
 
-**Note on Accessible Mode:**
+Commands:
+  run <input>       Run specialist agents on input files
+  ui [input]        Interactive dashboard for running agents   // ADD THIS
+  init              Initialize pagent configuration
+  status            Check status of running agents
+  logs <agent>      View agent conversation history
+  message <agent>   Send a message to an agent
+  stop [agent]      Stop running agents
+  agents            Manage agent definitions
+  version           Print version information
+  help              Show this help
 
-The `--accessible` flag enables huh's accessible mode which:
-- Disables fancy TUI rendering
-- Uses simple text prompts compatible with screen readers
-- Works in environments where ANSI escape codes aren't supported (e.g., `TERM=dumb`)
+Examples:
+  pagent run ./prd.md
+  pagent ui                           // ADD THIS
+  pagent ui ./prd.md                  // ADD THIS
+  pagent run ./prd.md -a architect,qa -s
+  pagent init
+  pagent status
 
-You can also auto-detect non-interactive terminals:
-
-```go
-import "golang.org/x/term"
-
-// isTerminal returns true if stdout is a terminal
-func isTerminal() bool {
-	return term.IsTerminal(int(os.Stdout.Fd()))
-}
-
-// In command functions, auto-enable accessible mode for non-terminals:
-if !isTerminal() {
-	accessible = true
+Run 'pagent <command> -h' for command-specific help.
+`)
 }
 ```
 
 ## Testing
 
+### Manual Testing
+
+```bash
+# Basic launch
+pagent ui
+
+# With pre-filled input
+pagent ui ./examples/sample-prd.md
+
+# Accessible mode
+pagent ui --accessible
+
+# Verify it calls run correctly
+pagent ui  # Select options, confirm, verify output
+```
+
 ### Unit Tests
 
 ```go
-// internal/tui/forms_test.go
+// internal/tui/files_test.go
 package tui
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/tuannvm/pagent/internal/config"
 )
 
-func TestInitFormCreation(t *testing.T) {
-	cfg := config.Default()
-	form := InitForm(cfg)
-
-	// Form should be created without error
-	assert.NotNil(t, form)
+func TestDiscoverInputFiles(t *testing.T) {
+	// Test in a directory with known files
+	files := DiscoverInputFiles()
+	// Should return slice (may be empty)
+	assert.NotNil(t, files)
 }
 
-func TestConfirmDialog(t *testing.T) {
-	// Test that Confirm returns proper types
-	// Note: Can't easily test interactive forms in unit tests
-	// Use integration tests for full form testing
+func TestIsMarkdownOrYAML(t *testing.T) {
+	assert.True(t, IsMarkdownOrYAML("test.md"))
+	assert.True(t, IsMarkdownOrYAML("test.yaml"))
+	assert.True(t, IsMarkdownOrYAML("test.yml"))
+	assert.False(t, IsMarkdownOrYAML("test.go"))
+	assert.False(t, IsMarkdownOrYAML("test.txt"))
 }
+```
+
+```go
+// internal/tui/theme_test.go
+package tui
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestPagentTheme(t *testing.T) {
 	theme := PagentTheme()
 	assert.NotNil(t, theme)
 }
+
+func TestHeaderStyle(t *testing.T) {
+	style := HeaderStyle()
+	assert.NotNil(t, style)
+}
 ```
-
-### Integration Tests
-
-```bash
-# Test non-interactive mode
-pagent init --no-interactive
-pagent run ./prd.md --no-interactive
-
-# Test interactive mode (manual)
-pagent init  # Should show form
-pagent run   # Should prompt for input
-
-# Test accessible mode
-pagent init --accessible
-```
-
-### Accessibility Testing
-
-```bash
-# Force accessible mode via flag
-pagent init --accessible
-
-# Force accessible mode via environment
-TERM=dumb pagent init
-```
-
-## Rollout
-
-1. **Alpha**: Add huh to `init` command only
-2. **Beta**: Add to `run` command input selection
-3. **GA**: Add confirmation dialogs, error recovery prompts
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `go.mod` | Add `github.com/charmbracelet/huh/v2`, `golang.org/x/term` |
-| `internal/tui/theme.go` | NEW |
-| `internal/tui/forms.go` | NEW |
-| `internal/tui/prompts.go` | NEW |
-| `internal/cmd/cli.go` | Add `--no-interactive` and `--accessible` flags |
-| `internal/cmd/init.go` | Add interactive form |
-| `internal/cmd/run.go` | Add input selection prompt, `findRecentPRDFiles()` helper |
+| `go.mod` | Add `huh/v2`, `lipgloss`, `x/term` |
+| `internal/tui/theme.go` | NEW: gum-like styling |
+| `internal/tui/files.go` | NEW: file discovery |
+| `internal/tui/dashboard.go` | NEW: main form |
+| `internal/cmd/ui.go` | NEW: ui command |
+| `internal/cmd/cli.go` | Add `ui` case, update help |
+
+## Known Limitations
+
+1. **Collapsible groups**: huh v2 doesn't have native collapsible sections. Advanced options are shown as a separate form page instead.
+2. **File picker**: huh's FilePicker is basic. For v1, we use a select list of discovered files + manual entry option.
+3. **Real-time validation**: Input validation happens after form submission, not during typing.
+
+## Future Enhancements
+
+- [ ] Custom file picker with directory navigation
+- [ ] Remember last used selections
+- [ ] Keyboard shortcuts (e.g., Ctrl+R to run immediately)
+- [ ] Live preview of command that will be executed
 
 ## References
 
 - [huh GitHub](https://github.com/charmbracelet/huh)
-- [huh v2 Docs](https://pkg.go.dev/github.com/charmbracelet/huh/v2)
-- [Bubble Tea](https://github.com/charmbracelet/bubbletea) (underlying TUI framework)
+- [huh Examples](https://github.com/charmbracelet/huh/tree/main/examples)
+- [gum GitHub](https://github.com/charmbracelet/gum) (style inspiration)
+- [lipgloss](https://github.com/charmbracelet/lipgloss) (styling library)
