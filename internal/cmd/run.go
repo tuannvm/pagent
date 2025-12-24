@@ -22,10 +22,9 @@ var (
 	sequential     bool
 	configPath     string
 	timeoutSeconds int
-	resumeMode     bool
-	forceMode      bool
-	personaFlag    string
-	statelessFlag  *bool // nil = use config default, non-nil = explicit override
+	resumeMode  bool
+	forceMode   bool
+	personaFlag string
 )
 
 var runCmd = &cobra.Command{
@@ -40,10 +39,10 @@ By default, all agents run in parallel. Use --sequential to run
 agents in dependency order.
 
 Examples:
-  pm-agents run ./prd.md                    # Single PRD file
-  pm-agents run ./input/                    # Directory with multiple inputs
-  pm-agents run ./specs/ --agents architect # Only run architect
-  pm-agents run ./prd.md --persona minimal  # MVP implementation`,
+  pagent run ./prd.md                    # Single PRD file
+  pagent run ./input/                    # Directory with multiple inputs
+  pagent run ./specs/ --agents architect # Only run architect
+  pagent run ./prd.md --persona minimal  # MVP implementation`,
 	Args: cobra.ExactArgs(1),
 	RunE: runCommand,
 }
@@ -60,8 +59,8 @@ func init() {
 	runCmd.Flags().BoolVarP(&forceMode, "force", "f", false, "force regeneration, ignore existing outputs")
 	runCmd.Flags().StringVarP(&personaFlag, "persona", "p", "", "implementation style: minimal, balanced, production (default: balanced)")
 
-	// Stateless flag - use pointer to detect if flag was explicitly set
-	statelessFlag = runCmd.Flags().Bool("stateless", false, "prefer stateless architecture (event-driven, no traditional DB)")
+	// Stateless flags - use Changed() to detect if explicitly set
+	runCmd.Flags().Bool("stateless", false, "prefer stateless architecture (event-driven, no traditional DB)")
 	runCmd.Flags().Bool("no-stateless", false, "prefer traditional database-backed architecture")
 }
 

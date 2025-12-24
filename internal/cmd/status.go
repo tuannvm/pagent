@@ -19,7 +19,7 @@ Shows each agent's current state (running/stable/not running)
 and port number.
 
 Example:
-  pm-agents status`,
+  pagent status`,
 	RunE: statusCommand,
 }
 

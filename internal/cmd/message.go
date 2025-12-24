@@ -19,8 +19,8 @@ The command will wait for the agent to become stable before sending.
 Use this to provide guidance or additional instructions.
 
 Example:
-  pm-agents message design "Focus more on mobile UX"
-  pm-agents message tech "Use REST, not GraphQL"`,
+  pagent message design "Focus more on mobile UX"
+  pagent message tech "Use REST, not GraphQL"`,
 	Args: cobra.ExactArgs(2),
 	RunE: messageCommand,
 }
@@ -37,7 +37,7 @@ func messageCommand(cmd *cobra.Command, args []string) error {
 	state, err := agent.LoadState()
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("no agents running - start with 'pm-agents run'")
+			return fmt.Errorf("no agents running - start with 'pagent run'")
 		}
 		return fmt.Errorf("failed to read state: %w", err)
 	}

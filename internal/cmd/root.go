@@ -14,24 +14,24 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "pm-agents",
+	Use:   "pagent",
 	Short: "PM Agent Workflow - Orchestrate specialist agents from PRD",
 	Long: `PM Agent Workflow is a CLI tool that spawns specialist agents
 (Design, Tech, QA, Security, Infra) to transform a PRD into
 actionable deliverables.
 
 Example:
-  pm-agents run ./prd.md
-  pm-agents run ./prd.md --agents design,tech
-  pm-agents status
-  pm-agents message tech "Focus on REST API"`,
+  pagent run ./prd.md
+  pagent run ./prd.md --agents design,tech
+  pagent status
+  pagent message tech "Focus on REST API"`,
 }
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("pm-agents version %s\n", version)
+		fmt.Printf("pagent version %s\n", version)
 	},
 }
 

@@ -21,8 +21,8 @@ var logsCmd = &cobra.Command{
 Shows all messages exchanged between the user and the agent.
 
 Example:
-  pm-agents logs design
-  pm-agents logs tech --follow`,
+  pagent logs design
+  pagent logs tech --follow`,
 	Args: cobra.ExactArgs(1),
 	RunE: logsCommand,
 }
@@ -39,7 +39,7 @@ func logsCommand(cmd *cobra.Command, args []string) error {
 	state, err := agent.LoadState()
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("no agents running - start with 'pm-agents run'")
+			return fmt.Errorf("no agents running - start with 'pagent run'")
 		}
 		return fmt.Errorf("failed to read state: %w", err)
 	}

@@ -12,14 +12,14 @@ import (
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initialize pm-agents configuration",
-	Long: `Create a .pm-agents/config.yaml file in the current directory
+	Short: "Initialize pagent configuration",
+	Long: `Create a .pagent/config.yaml file in the current directory
 with default agent configurations.
 
 You can customize the prompts and settings after initialization.
 
 Example:
-  pm-agents init`,
+  pagent init`,
 	RunE: initCommand,
 }
 
@@ -28,7 +28,7 @@ func init() {
 }
 
 func initCommand(cmd *cobra.Command, args []string) error {
-	configDir := ".pm-agents"
+	configDir := ".pagent"
 	configFile := filepath.Join(configDir, "config.yaml")
 
 	// Check if already exists
@@ -65,7 +65,7 @@ func initCommand(cmd *cobra.Command, args []string) error {
 	logInfo("Created %s", configFile)
 	logInfo("")
 	logInfo("You can now customize agent prompts and run:")
-	logInfo("  pm-agents run ./prd.md")
+	logInfo("  pagent run ./prd.md")
 
 	return nil
 }

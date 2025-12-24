@@ -84,7 +84,7 @@ func NewLibClient(ctx context.Context, cfg LibClientConfig) (*LibClient, error) 
 		AllowedOrigins: []string{"http://localhost", "http://127.0.0.1"},
 	})
 	if err != nil {
-		process.Close(logger, 5*time.Second)
+		_ = process.Close(logger, 5*time.Second)
 		return nil, fmt.Errorf("failed to create server: %w", err)
 	}
 

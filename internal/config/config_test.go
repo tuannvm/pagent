@@ -399,13 +399,9 @@ func TestApplyEnvOverrides(t *testing.T) {
 		Timeout:   300,
 	}
 
-	// Set env vars
-	os.Setenv("PM_AGENTS_OUTPUT_DIR", "/from/env")
-	os.Setenv("PM_AGENTS_TIMEOUT", "600")
-	defer func() {
-		os.Unsetenv("PM_AGENTS_OUTPUT_DIR")
-		os.Unsetenv("PM_AGENTS_TIMEOUT")
-	}()
+	// Set env vars using t.Setenv (auto cleanup)
+	t.Setenv("PM_AGENTS_OUTPUT_DIR", "/from/env")
+	t.Setenv("PM_AGENTS_TIMEOUT", "600")
 
 	cfg.ApplyEnvOverrides()
 
@@ -424,8 +420,7 @@ func TestApplyEnvOverridesInvalidTimeout(t *testing.T) {
 	}
 
 	// Invalid timeout should be ignored
-	os.Setenv("PM_AGENTS_TIMEOUT", "invalid")
-	defer os.Unsetenv("PM_AGENTS_TIMEOUT")
+	t.Setenv("PM_AGENTS_TIMEOUT", "invalid")
 
 	cfg.ApplyEnvOverrides()
 

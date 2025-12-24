@@ -21,7 +21,7 @@ var agentsListCmd = &cobra.Command{
 	Long: `List all available agent types with their output files.
 
 Example:
-  pm-agents agents list`,
+  pagent agents list`,
 	RunE: agentsListCommand,
 }
 
@@ -31,8 +31,8 @@ var agentsShowCmd = &cobra.Command{
 	Long: `Show the prompt template for a specific agent.
 
 Example:
-  pm-agents agents show design
-  pm-agents agents show tech`,
+  pagent agents show design
+  pagent agents show tech`,
 	Args: cobra.ExactArgs(1),
 	RunE: agentsShowCommand,
 }
@@ -75,7 +75,7 @@ func agentsShowCommand(cmd *cobra.Command, args []string) error {
 
 	agent, ok := cfg.Agents[agentName]
 	if !ok {
-		return fmt.Errorf("unknown agent: %s (use 'pm-agents agents list' to see available agents)", agentName)
+		return fmt.Errorf("unknown agent: %s (use 'pagent agents list' to see available agents)", agentName)
 	}
 
 	fmt.Printf("Agent: %s\n", agentName)

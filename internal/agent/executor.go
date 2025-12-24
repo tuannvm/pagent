@@ -21,7 +21,7 @@ func (m *Manager) spawnAgent(ctx context.Context, name string, port int) (*Runni
 
 	// Start the HTTP server
 	if err := libClient.Start(); err != nil {
-		libClient.Close(ctx)
+		_ = libClient.Close(ctx)
 		return nil, fmt.Errorf("failed to start lib server: %w", err)
 	}
 

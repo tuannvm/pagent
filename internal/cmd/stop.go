@@ -20,8 +20,8 @@ var stopCmd = &cobra.Command{
 	Long: `Stop one or all running agents.
 
 Examples:
-  pm-agents stop tech         # Stop specific agent
-  pm-agents stop --all        # Stop all agents`,
+  pagent stop tech         # Stop specific agent
+  pagent stop --all        # Stop all agents`,
 	RunE: stopCommand,
 }
 
