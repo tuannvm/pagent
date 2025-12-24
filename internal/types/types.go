@@ -7,15 +7,17 @@ package types
 type TechStack struct {
 	// Cloud provider and compute
 	Cloud   string `yaml:"cloud"`   // aws, gcp, azure
-	Compute string `yaml:"compute"` // eks, gke, aks, ec2, lambda
+	Compute string `yaml:"compute"` // eks, gke, aks, ec2, lambda, github-actions, none
 
 	// Databases
-	Database string `yaml:"database"` // postgres, mongodb, mysql
-	Cache    string `yaml:"cache"`    // redis, memcached, kvrock
-	Search   string `yaml:"search"`   // elasticsearch, opensearch
+	// Use "none" or empty string to indicate no database (stateless architecture)
+	Database string `yaml:"database"` // postgres, mongodb, mysql, none
+	Cache    string `yaml:"cache"`    // redis, memcached, kvrock, none
+	Search   string `yaml:"search"`   // elasticsearch, opensearch, none
 
 	// Messaging and streaming
-	MessageQueue string `yaml:"message_queue"` // kafka, sqs, rabbitmq, nats
+	// Use "none" or empty string to indicate synchronous/no message queue
+	MessageQueue string `yaml:"message_queue"` // kafka, sqs, rabbitmq, nats, none
 
 	// Infrastructure automation
 	IaC    string `yaml:"iac"`    // terraform, pulumi, cloudformation
@@ -131,6 +133,55 @@ func DefaultStack() TechStack {
 		// Additional tools (empty by default)
 		Additional: []string{},
 	}
+}
+
+// StackConflict represents a detected conflict between PRD and config
+type StackConflict struct {
+	Category    string // "database", "compute", "cache", "message_queue"
+	ConfigValue string // What the config specifies
+	PRDHint     string // What the PRD suggests (extracted keyword)
+	Resolved    bool   // Whether this conflict has been resolved
+	Resolution  string // The resolved value (if Resolved is true)
+}
+
+// StackResolution holds user-resolved conflicts from the UI
+// This is populated by the interactive UI before agents run
+type StackResolution struct {
+	// Resolved indicates that the user has reviewed and resolved conflicts
+	Resolved bool `yaml:"resolved"`
+
+	// Conflicts lists all detected conflicts and their resolutions
+	Conflicts []StackConflict `yaml:"conflicts,omitempty"`
+
+	// EffectiveStack is the final stack after applying resolutions
+	// This takes precedence over Config.Stack when provided
+	EffectiveStack *TechStack `yaml:"effective_stack,omitempty"`
+}
+
+// HasConflicts returns true if there are unresolved conflicts
+func (r *StackResolution) HasConflicts() bool {
+	if r == nil {
+		return false
+	}
+	for _, c := range r.Conflicts {
+		if !c.Resolved {
+			return true
+		}
+	}
+	return false
+}
+
+// GetResolution returns the resolution for a specific category, or empty if not found
+func (r *StackResolution) GetResolution(category string) string {
+	if r == nil {
+		return ""
+	}
+	for _, c := range r.Conflicts {
+		if c.Category == category && c.Resolved {
+			return c.Resolution
+		}
+	}
+	return ""
 }
 
 // DefaultPreferences returns the default architecture preferences.

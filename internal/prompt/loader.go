@@ -19,6 +19,8 @@ var embeddedTemplates embed.FS
 type (
 	TechStack               = types.TechStack
 	ArchitecturePreferences = types.ArchitecturePreferences
+	StackResolution         = types.StackResolution
+	StackConflict           = types.StackConflict
 )
 
 // Variables holds the template variables for prompt rendering
@@ -41,6 +43,9 @@ type Variables struct {
 	TargetCodebase string // Path to existing codebase (for modify mode)
 	SpecsOutputDir string // Directory for spec outputs
 	CodeOutputDir  string // Directory for code outputs
+
+	// Resolution holds user-resolved conflicts from UI (nil if no UI interaction)
+	Resolution *StackResolution
 
 	// Custom allows arbitrary key-value pairs
 	Custom map[string]string
@@ -77,8 +82,106 @@ func (v Variables) HasTargetCodebase() bool {
 }
 
 // IsStateless returns true if stateless architecture is preferred
+// This is true if either:
+// 1. Preferences.Stateless is explicitly true, OR
+// 2. All storage technologies (database, cache, message_queue) are "none" or empty
 func (v Variables) IsStateless() bool {
-	return v.Preferences.Stateless
+	if v.Preferences.Stateless {
+		return true
+	}
+	// Infer stateless if all storage is disabled
+	return !v.HasDatabase() && !v.HasCache() && !v.HasMessageQueue()
+}
+
+// HasDatabase returns true if a database is configured (not "none" or empty)
+func (v Variables) HasDatabase() bool {
+	return v.Stack.Database != "" && v.Stack.Database != "none"
+}
+
+// HasCache returns true if a cache is configured (not "none" or empty)
+func (v Variables) HasCache() bool {
+	return v.Stack.Cache != "" && v.Stack.Cache != "none"
+}
+
+// HasMessageQueue returns true if a message queue is configured (not "none" or empty)
+func (v Variables) HasMessageQueue() bool {
+	return v.Stack.MessageQueue != "" && v.Stack.MessageQueue != "none"
+}
+
+// HasDataLake returns true if a data lake is configured (not "none" or empty)
+func (v Variables) HasDataLake() bool {
+	return v.Stack.DataLake != "" && v.Stack.DataLake != "none"
+}
+
+// IsGitHubActions returns true if compute is github-actions
+func (v Variables) IsGitHubActions() bool {
+	return v.Stack.Compute == "github-actions"
+}
+
+// IsKubernetes returns true if compute is kubernetes-based (kubernetes, eks, gke, aks)
+func (v Variables) IsKubernetes() bool {
+	switch v.Stack.Compute {
+	case "kubernetes", "eks", "gke", "aks":
+		return true
+	default:
+		return false
+	}
+}
+
+// IsServerless returns true if compute is serverless (lambda, cloud-functions, etc.)
+func (v Variables) IsServerless() bool {
+	switch v.Stack.Compute {
+	case "lambda", "cloud-functions", "azure-functions", "serverless":
+		return true
+	default:
+		return false
+	}
+}
+
+// NeedsContainerization returns true if the app should be containerized
+// This is false for GitHub Actions or serverless compute
+func (v Variables) NeedsContainerization() bool {
+	if v.IsGitHubActions() || v.IsServerless() {
+		return false
+	}
+	return v.Preferences.Containerized
+}
+
+// NeedsKubernetesManifests returns true if k8s manifests should be generated
+func (v Variables) NeedsKubernetesManifests() bool {
+	return v.IsKubernetes() && v.Preferences.IncludeIaC
+}
+
+// HasResolution returns true if UI-resolved conflicts are available
+func (v Variables) HasResolution() bool {
+	return v.Resolution != nil && v.Resolution.Resolved
+}
+
+// HasUnresolvedConflicts returns true if there are conflicts that need resolution
+func (v Variables) HasUnresolvedConflicts() bool {
+	return v.Resolution != nil && v.Resolution.HasConflicts()
+}
+
+// GetResolvedValue returns the resolved value for a category, or the config default
+func (v Variables) GetResolvedValue(category string) string {
+	if v.Resolution != nil {
+		if resolved := v.Resolution.GetResolution(category); resolved != "" {
+			return resolved
+		}
+	}
+	// Fall back to config values
+	switch category {
+	case "database":
+		return v.Stack.Database
+	case "cache":
+		return v.Stack.Cache
+	case "message_queue":
+		return v.Stack.MessageQueue
+	case "compute":
+		return v.Stack.Compute
+	default:
+		return ""
+	}
 }
 
 // IsREST returns true if REST API style is preferred

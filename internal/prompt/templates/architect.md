@@ -62,29 +62,55 @@ Code modifications will target: {{.CodeOutputDir}}
 
 Design the architecture according to these preferences.
 
-## Technology Stack{{if .Stack.Cloud}} (USE THESE){{end}}
+## Technology Stack (DEFAULTS - PRD CAN OVERRIDE)
 
-You MUST design for this specific technology stack:
+The following are DEFAULT technology preferences. **PRD requirements take precedence.**
 
-| Category | Technology |
-|----------|------------|
-| **Cloud** | {{.Stack.Cloud | upper}} |
-| **Compute** | {{.Stack.Compute | upper}} |
-| **Database** | {{.Stack.Database}} |
-| **Cache** | {{.Stack.Cache}} |
-| **Message Queue** | {{.Stack.MessageQueue}} |
-| **IaC** | {{.Stack.IaC}} |
-| **GitOps** | {{.Stack.GitOps}} |
-| **CI/CD** | {{.Stack.CI}} |
-| **Data Lake** | {{.Stack.DataLake}} |
-| **Query Engine** | {{.Stack.QueryEngine}} |
-| **Monitoring** | {{.Stack.Monitoring}} |
-| **Alerting** | {{.Stack.Alerting}} |
-| **Logging** | {{.Stack.Logging}} |
-| **Chat** | {{.Stack.Chat}} |
-{{if .Stack.Additional}}| **Additional** | {{join .Stack.Additional ", "}} |{{end}}
+| Category | Technology | Status |
+|----------|------------|--------|
+{{if .Stack.Cloud}}| **Cloud** | {{.Stack.Cloud | upper}} | Use |
+{{end}}{{if .Stack.Compute}}| **Compute** | {{.Stack.Compute | upper}} | {{if .IsGitHubActions}}GitHub Actions (no containers){{else if .IsKubernetes}}Kubernetes{{else if .IsServerless}}Serverless{{else}}Use{{end}} |
+{{end}}{{if .HasDatabase}}| **Database** | {{.Stack.Database}} | Use |
+{{else}}| **Database** | None | ⚠️ Stateless - no database |
+{{end}}{{if .HasCache}}| **Cache** | {{.Stack.Cache}} | Use |
+{{else}}| **Cache** | None | ⚠️ No caching layer |
+{{end}}{{if .HasMessageQueue}}| **Message Queue** | {{.Stack.MessageQueue}} | Use |
+{{else}}| **Message Queue** | None | ⚠️ Synchronous only |
+{{end}}{{if .Stack.IaC}}| **IaC** | {{.Stack.IaC}} | Use |
+{{end}}{{if .Stack.GitOps}}| **GitOps** | {{.Stack.GitOps}} | Use |
+{{end}}{{if .Stack.CI}}| **CI/CD** | {{.Stack.CI}} | Use |
+{{end}}{{if .HasDataLake}}| **Data Lake** | {{.Stack.DataLake}} | Use |
+{{end}}{{if .Stack.QueryEngine}}| **Query Engine** | {{.Stack.QueryEngine}} | Use |
+{{end}}{{if .Stack.Monitoring}}| **Monitoring** | {{.Stack.Monitoring}} | Use |
+{{end}}{{if .Stack.Alerting}}| **Alerting** | {{.Stack.Alerting}} | Use |
+{{end}}{{if .Stack.Logging}}| **Logging** | {{.Stack.Logging}} | Use |
+{{end}}{{if .Stack.Chat}}| **Chat** | {{.Stack.Chat}} | Use |
+{{end}}{{if .Stack.Additional}}| **Additional** | {{join .Stack.Additional ", "}} | Use |
+{{end}}
 
 Design all components to integrate with this stack. Do NOT suggest alternatives unless the PRD specifically requires something different.
+
+### PRD vs Config Stack Conflict Resolution (CRITICAL)
+
+The PRD is the **ultimate source of truth** for architectural decisions. When PRD and config.stack conflict:
+
+**PRD WINS when it explicitly specifies:**
+| PRD Language | Interpretation | Config Override |
+|--------------|----------------|-----------------|
+| "stateless", "no database", "ephemeral" | No persistent database | Ignore config.database |
+| "GitHub Actions", "serverless", "no kubernetes" | Not K8s-based | Ignore config.compute |
+| "no message queue", "synchronous", "direct calls" | No async messaging | Ignore config.message_queue |
+| "in-memory", "no caching layer" | No external cache | Ignore config.cache |
+
+**Config applies when:**
+- PRD is silent on a technology category
+- PRD says "use existing infrastructure" or similar
+- Config value is `none` or empty (explicit exclusion - honor it)
+
+**In your architecture document:**
+1. If PRD contradicts config, document the conflict explicitly
+2. Follow PRD requirements, not config preferences
+3. State which config values were overridden and why
 
 {{if .IsStateless}}
 ## ⚡ STATELESS ARCHITECTURE PREFERRED
@@ -93,28 +119,29 @@ You MUST design for **stateless** architecture wherever possible:
 
 ### Guiding Principles
 1. **Avoid Traditional Databases** - No RDBMS or document stores for application state
-2. **Event-Driven Over CRUD** - Use message queues ({{.Stack.MessageQueue}}) for state propagation
-3. **External State Stores** - Use {{.Stack.Cache}} for session/ephemeral state, {{.Stack.DataLake}} for persistence
-4. **Idempotent Operations** - All operations should be safely repeatable
-5. **Pass State Through Events** - Include all necessary context in event payloads
+2. **Idempotent Operations** - All operations should be safely repeatable
+3. **Pass State Through Requests** - Include all necessary context in request/event payloads
+4. **Ephemeral Compute** - Design for disposable execution environments
+{{if .HasMessageQueue}}5. **Event-Driven Over CRUD** - Use {{.Stack.MessageQueue}} for state propagation{{end}}
+{{if .HasDataLake}}6. **External Persistence** - Use {{.Stack.DataLake}} for durable storage when needed{{end}}
 
 ### Stateless Patterns to Use
 | Instead of | Use |
 |------------|-----|
-| Database for app state | {{.Stack.MessageQueue}} events + {{.Stack.DataLake}} for audit/replay |
-| Session storage in DB | {{.Stack.Cache}} with TTL |
-| Transactional CRUD | Event sourcing with idempotency keys |
-| Polling database | Subscribe to {{.Stack.MessageQueue}} topics |
-| Request/response for async | Fire-and-forget events with correlation IDs |
-
+| Database for app state | {{if .HasMessageQueue}}{{.Stack.MessageQueue}} events + {{end}}{{if .HasDataLake}}{{.Stack.DataLake}}{{else}}object storage{{end}} for audit/replay |
+| Session storage in DB | {{if .HasCache}}{{.Stack.Cache}} with TTL{{else}}Stateless JWT tokens{{end}} |
+| Transactional CRUD | {{if .HasMessageQueue}}Event sourcing with idempotency keys{{else}}Idempotent API operations{{end}} |
+| Polling database | {{if .HasMessageQueue}}Subscribe to {{.Stack.MessageQueue}} topics{{else}}Webhook callbacks{{end}} |
+| Request/response for async | {{if .HasMessageQueue}}Fire-and-forget events with correlation IDs{{else}}Async job queues or webhook callbacks{{end}} |
+{{if .HasDatabase}}
 ### When Database is Unavoidable
 Only use {{.Stack.Database}} for:
 - Read-heavy reference data that changes infrequently
 - Audit logs / compliance requirements
-- Search indexes (consider {{.Stack.Search}} instead)
+- Search indexes{{if .Stack.Search}} (consider {{.Stack.Search}} instead){{end}}
 
 Even then, treat it as a **read replica** populated by events, not the source of truth.
-{{end}}
+{{end}}{{end}}
 
 {{if .HasExisting}}
 ## CHANGE DETECTION MODE
