@@ -15,7 +15,7 @@ COPY . .
 
 # Build the binary
 ARG VERSION=dev
-RUN CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=${VERSION}" -o pm-agents ./cmd/pm-agents
+RUN CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=${VERSION}" -o pagent ./cmd/pagent
 
 # Runtime stage
 FROM alpine:3.20
@@ -30,6 +30,6 @@ USER pmuser
 WORKDIR /home/pmuser
 
 # Copy binary from builder
-COPY --from=builder /app/pm-agents /usr/local/bin/pm-agents
+COPY --from=builder /app/pagent /usr/local/bin/pagent
 
-ENTRYPOINT ["pm-agents"]
+ENTRYPOINT ["pagent"]

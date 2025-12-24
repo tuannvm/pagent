@@ -1,5 +1,5 @@
 # Binaries
-pm-agents
+pagent
 bin/
 dist/
 
@@ -35,7 +35,7 @@ coverage.html
 # Temp files
 *.tmp
 *.temp
-.pm-agents/
+.pagent/
 
 # Logs
 *.log

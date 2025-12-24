@@ -7,8 +7,8 @@ before:
     - go mod tidy
 
 builds:
-  - binary: pm-agents
-    main: ./cmd/pm-agents
+  - binary: pagent
+    main: ./cmd/pagent
     env:
       - CGO_ENABLED=0
     goos:

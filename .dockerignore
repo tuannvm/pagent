@@ -12,7 +12,7 @@
 dist/
 outputs/
 outputs-*/
-pm-agents
+pagent
 
 # Documentation
 *.md
