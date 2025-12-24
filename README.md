@@ -8,7 +8,7 @@ A CLI tool that orchestrates Claude Code specialist agents to transform PRDs int
 
 ## Overview
 
-`pm-agents` spawns specialist agents via [AgentAPI](https://github.com/coder/agentapi) to produce:
+`pm-agents` uses the [AgentAPI](https://github.com/coder/agentapi) library to spawn and manage specialist agents that produce:
 
 **Specification Documents:**
 - Design specifications
@@ -44,9 +44,10 @@ A CLI tool that orchestrates Claude Code specialist agents to transform PRDs int
 
 ## Prerequisites
 
-- [AgentAPI](https://github.com/coder/agentapi) installed and in PATH
 - [Claude Code](https://claude.ai/claude-code) installed and authenticated
 - Go 1.21+ (for building from source)
+
+> **Note:** No external AgentAPI binary required. `pm-agents` uses the AgentAPI library directly.
 
 ## Installation
 
@@ -265,11 +266,11 @@ agents:
 ## How It Works
 
 1. **Parse PRD** - Reads the PRD file path
-2. **Spawn Agents** - Starts AgentAPI process per specialist (`agentapi server --port <port> -- claude`)
-3. **Health Check** - Polls `GET /status` until agent responds (30s timeout)
+2. **Spawn Agents** - Uses AgentAPI library to start Claude Code processes directly (no external binary)
+3. **Health Check** - Polls `GET /status` until agent responds (2 min timeout)
 4. **Send Task** - `POST /message` with prompt containing PRD path and output path
 5. **Monitor** - Polls `/status` until `running` -> `stable` transition
-6. **Cleanup** - Kills AgentAPI process groups on completion/interrupt
+6. **Cleanup** - Gracefully terminates agent processes on completion/interrupt
 
 ### Parallel vs Sequential
 
@@ -338,12 +339,16 @@ pm-agent-workflow/
 ├── cmd/pm-agents/           # Entry point
 ├── internal/
 │   ├── agent/               # Agent lifecycle management and orchestration
-│   │   ├── manager.go       # Agent spawning, health checks, task dispatch
-│   │   └── orchestrator.go  # Interface abstraction for testability
-│   ├── api/                 # AgentAPI HTTP client
+│   │   ├── manager.go       # Core orchestration, RunAgent, state management
+│   │   ├── executor.go      # Agent lifecycle (spawn, wait, stop)
+│   │   ├── scheduler.go     # Dependency resolution (topological sort)
+│   │   ├── orchestrator.go  # Interface abstraction for testability
+│   │   └── agentapi_lib.go  # AgentAPI library client integration
+│   ├── api/                 # HTTP client for agent status polling
 │   ├── cmd/                 # CLI commands
 │   ├── config/              # Configuration loading
 │   ├── input/               # Input file discovery (single file or directory)
+│   ├── postprocess/         # Post-execution actions (diff summary, PR description)
 │   ├── prompt/              # Prompt template loading and rendering
 │   ├── state/               # Resume state management (content hashing)
 │   └── types/               # Shared type definitions (TechStack, Preferences)
@@ -373,16 +378,6 @@ pm-agent-workflow/
 - Generated code may require minor fixes (verified to compile with `go build`)
 
 ## Troubleshooting
-
-### "agentapi not found"
-
-Install AgentAPI:
-```bash
-# Download from releases
-curl -fsSL "https://github.com/coder/agentapi/releases/latest/download/agentapi-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')" -o agentapi
-chmod +x agentapi
-sudo mv agentapi /usr/local/bin/
-```
 
 ### "timeout waiting for agent"
 
@@ -425,6 +420,6 @@ Server flags: `--port` (default 3284), `--type`, `--allowed-hosts`, `--initial-p
 
 ## Acknowledgments
 
-- [AgentAPI](https://github.com/coder/agentapi) - HTTP wrapper for Claude Code
+- [AgentAPI](https://github.com/coder/agentapi) - Go library for Claude Code process management
 - [Claude Code](https://claude.ai/claude-code) - AI coding assistant
 - [Cobra](https://github.com/spf13/cobra) - CLI framework

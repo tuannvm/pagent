@@ -39,7 +39,7 @@ A thin CLI orchestrator built on top of AgentAPI:
 
 ### Design Principles
 
-1. **Minimal dependencies** — AgentAPI binary + standard library
+1. **Minimal dependencies** — AgentAPI library (Go) + standard library
 2. **File-based everything** — PRD in, markdown out, no databases
 3. **Parallel by default** — Independent agents run simultaneously
 4. **CLI-first** — No web UI required; terminal is the interface
@@ -388,7 +388,6 @@ agents:
 
 ### Technical Constraints
 
-- AgentAPI binary must be installed and in PATH
 - Claude Code must be installed and authenticated
 - Ports 3284-3290 available for agent processes
 - macOS or Linux (Windows not supported in v1)

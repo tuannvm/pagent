@@ -6,24 +6,13 @@ This tutorial walks you through using `pm-agents` to transform a PRD into compre
 
 Before starting, ensure you have:
 
-1. **AgentAPI** installed:
-   ```bash
-   # Download and install
-   curl -fsSL "https://github.com/coder/agentapi/releases/latest/download/agentapi-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')" -o agentapi
-   chmod +x agentapi
-   sudo mv agentapi /usr/local/bin/
-
-   # Verify installation
-   agentapi --version
-   ```
-
-2. **Claude Code** installed and authenticated:
+1. **Claude Code** installed and authenticated:
    ```bash
    # Verify Claude Code is working
    claude --version
    ```
 
-3. **pm-agents** binary:
+2. **pm-agents** CLI:
    ```bash
    # Build from source
    git clone https://github.com/tuannvm/pm-agent-workflow

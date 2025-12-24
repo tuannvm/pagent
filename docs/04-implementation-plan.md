@@ -218,12 +218,12 @@ type Orchestrator interface {
 
 3. For each selected agent:
    a. Allocate port (3284, 3285, ...)
-   b. Spawn: agentapi server --port <port> -- claude
-   c. Wait for health check (30s timeout)
+   b. Spawn agent using AgentAPI library (termexec + httpapi)
+   c. Wait for health check (2 min timeout)
    d. Send task prompt with PRD path
    e. Monitor status until stable
    f. Verify output file created
-   g. Cleanup AgentAPI process
+   g. Gracefully terminate agent process
 
 4. Print summary with results
 ```
