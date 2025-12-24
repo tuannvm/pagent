@@ -136,7 +136,7 @@ Examples:
 	}
 
 	// Ensure output directory exists
-	if err := os.MkdirAll(cfg.OutputDir, 0755); err != nil {
+	if err = os.MkdirAll(cfg.OutputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 

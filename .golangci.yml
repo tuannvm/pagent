@@ -10,11 +10,16 @@ linters:
   disable:
     - depguard
   exclusions:
-    # Don't run errcheck on test files
     rules:
+      # Don't run errcheck on test files
       - linters:
           - errcheck
         path: "(.+)_test\\.go"
+      # Allow unused writes in test files (test fixtures)
+      - linters:
+          - govet
+        path: "(.+)_test\\.go"
+        text: "unusedwrite"
   settings:
     errcheck:
       check-type-assertions: true
@@ -22,6 +27,8 @@ linters:
         - (io.Closer).Close
     govet:
       enable-all: true
+      disable:
+        - fieldalignment  # Too pedantic, micro-optimization
     gocyclo:
       min-complexity: 15
     misspell:
