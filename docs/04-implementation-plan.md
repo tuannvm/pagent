@@ -1,4 +1,4 @@
-# Implementation Summary: PM Agent Workflow CLI
+# Implementation Summary: Pagent CLI
 
 > **Status:** Implemented and verified against [AgentAPI OpenAPI spec](https://github.com/coder/agentapi/blob/main/openapi.json)
 >
@@ -10,7 +10,7 @@ This document describes the actual implementation. The earlier research explored
 
 ```
 ┌─────────────────────────────────────────────────┐
-│           pm-agents (CLI orchestrator)           │
+│           pagent (CLI orchestrator)           │
 │  - Parse PRD, spawn agents, route tasks          │
 │  - ~800 lines of Go code                         │
 └─────────────────────┬───────────────────────────┘
@@ -34,7 +34,7 @@ This document describes the actual implementation. The earlier research explored
 | Component | Choice | Rationale |
 |-----------|--------|-----------|
 | Language | Go | Single binary, fast startup, excellent concurrency |
-| CLI Framework | Cobra | Industry standard for Go CLIs |
+| CLI Framework | stdlib flag | Minimal dependencies, future TUI via huh |
 | Agent Control | [AgentAPI](https://github.com/coder/agentapi) | Simple HTTP wrapper around Claude Code |
 | Config | YAML | Human-readable, familiar |
 | Output | Markdown | Universal, version-controllable |
@@ -42,8 +42,8 @@ This document describes the actual implementation. The earlier research explored
 ## Project Structure
 
 ```
-pm-agent-workflow/
-├── cmd/pm-agents/
+pagent/
+├── cmd/pagent/
 │   └── main.go              # Entry point
 ├── internal/
 │   ├── agent/
@@ -142,7 +142,7 @@ Claude Code starts in `"running"` state while loading. The CLI must:
 YAML-based configuration with:
 - Default agent prompts (5 agents with clear boundaries)
 - Dependency ordering
-- Environment variable overrides (`PM_AGENTS_OUTPUT_DIR`, `PM_AGENTS_TIMEOUT`)
+- Environment variable overrides (`PAGENT_OUTPUT_DIR`, `PAGENT_TIMEOUT`)
 - **Persona system**: minimal, balanced, production
 - **Architecture preferences**: API style, testing depth, documentation level
 - **Technology stack**: Cloud, compute, database, cache, messaging
@@ -171,7 +171,7 @@ Canonical type definitions shared across packages:
 Content-hash based resume detection:
 - Tracks SHA-256 hashes of inputs, config, and dependency outputs
 - Determines if agent output is up-to-date or needs regeneration
-- State persisted to `.pm-agents/.resume-state.json`
+- State persisted to `.pagent/.resume-state.json`
 
 **Change detection checks:**
 1. Input files changed?
@@ -210,10 +210,10 @@ type Orchestrator interface {
 ## Execution Flow
 
 ```
-1. User runs: pm-agents run ./prd.md
+1. User runs: pagent run ./prd.md
 
 2. CLI loads config (or uses defaults)
-   - Reads .pm-agents/config.yaml if exists
+   - Reads .pagent/config.yaml if exists
    - Applies environment variable overrides
 
 3. For each selected agent:
@@ -251,13 +251,13 @@ type Orchestrator interface {
 ## State Management
 
 **Runtime State:**
-- State file: `/tmp/pm-agents-state.json`
+- State file: `/tmp/pagent-state.json`
 - Contains: `{"agent_name": port_number, ...}`
 - Used by `status`, `logs`, `message`, `stop` commands
 - Cleared on run completion
 
 **Resume State:**
-- State file: `.pm-agents/.resume-state.json` (in output dir)
+- State file: `.pagent/.resume-state.json` (in output dir)
 - Contains: content hashes for inputs, config, and agent outputs
 - Persists across runs to enable `--resume` mode
 - Structure:
@@ -304,7 +304,6 @@ Per requirements, these are explicitly out of scope:
 ## Dependencies
 
 - [AgentAPI](https://github.com/coder/agentapi) - HTTP wrapper for Claude Code
-- [Cobra](https://github.com/spf13/cobra) - CLI framework
 - [YAML.v3](https://gopkg.in/yaml.v3) - Configuration parsing
 
 ## Development
@@ -329,7 +328,7 @@ The following end-to-end workflow was tested successfully:
 
 ```bash
 # Run all 5 agents in sequential mode
-pm-agents run ./examples/task-manager-prd.md --sequential -v
+pagent run ./examples/task-manager-prd.md --sequential -v
 ```
 
 **Outputs Generated:**
@@ -371,4 +370,3 @@ go vet ./...    # ✓ Passes
 
 - [AgentAPI GitHub](https://github.com/coder/agentapi)
 - [AgentAPI HN Discussion](https://news.ycombinator.com/item?id=43719447)
-- [Cobra CLI Framework](https://github.com/spf13/cobra)

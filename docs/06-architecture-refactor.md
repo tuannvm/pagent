@@ -188,14 +188,14 @@ Too complex for CLI tool.
 
 ```bash
 # v1 behavior (current)
-pm-agents run prd.md --sequential
+pagent run prd.md --sequential
 
 # v1.1 (with refactored agents)
-pm-agents run prd.md --sequential
+pagent run prd.md --sequential
 # Runs: architect → qa → security → implementer → verifier
 
 # v2 (with iteration)
-pm-agents run prd.md --iterate --max-rounds 3
+pagent run prd.md --iterate --max-rounds 3
 # Runs multiple rounds until verifier passes
 ```
 

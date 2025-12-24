@@ -1,4 +1,4 @@
-# Requirements: PM Agent Workflow CLI
+# Requirements: Pagent CLI
 
 ## Problem Statement
 
@@ -18,7 +18,7 @@ A thin CLI orchestrator built on top of AgentAPI:
 
 ```
 ┌─────────────────────────────────────────────────┐
-│           pm-agents (CLI orchestrator)           │
+│           pagent (CLI orchestrator)           │
 │  - Parse PRD, spawn agents, route tasks          │
 │  - ~500-800 lines of code total                  │
 └─────────────────────┬───────────────────────────┘
@@ -63,48 +63,48 @@ A thin CLI orchestrator built on top of AgentAPI:
 
 ```bash
 # Run all specialists on a PRD
-pm-agents run ./prd.md
+pagent run ./prd.md
 
 # Run specific specialists only
-pm-agents run ./prd.md --agents design,tech
+pagent run ./prd.md --agents design,tech
 
 # Run with custom output directory
-pm-agents run ./prd.md --output ./docs/
+pagent run ./prd.md --output ./docs/
 
 # Run with dependency ordering (tech waits for design)
-pm-agents run ./prd.md --sequential
+pagent run ./prd.md --sequential
 ```
 
 ### Agent Interaction
 
 ```bash
 # Check status of running agents
-pm-agents status
+pagent status
 
 # View live output from an agent
-pm-agents logs tech --follow
+pagent logs tech --follow
 
 # Send a message to a specific agent (when idle)
-pm-agents message design "Focus more on mobile UX"
+pagent message design "Focus more on mobile UX"
 
 # Stop a specific agent
-pm-agents stop tech
+pagent stop tech
 
 # Stop all agents
-pm-agents stop --all
+pagent stop --all
 ```
 
 ### Configuration
 
 ```bash
 # Initialize config in current directory
-pm-agents init
+pagent init
 
 # List available agent types
-pm-agents agents list
+pagent agents list
 
 # Show agent prompt template
-pm-agents agents show design
+pagent agents show design
 ```
 
 ## Functional Requirements
@@ -178,15 +178,15 @@ Five specialists with clear boundaries (no overlap):
 
 ### FR-6: Configuration
 
-- **FR-6.1**: Config file at `.pm-agents/config.yaml`
+- **FR-6.1**: Config file at `.pagent/config.yaml`
 - **FR-6.2**: Configurable per agent:
   - System prompt (or path to prompt file)
   - Output filename
   - Dependencies (which agents to wait for)
   - Model override (if supported)
 - **FR-6.3**: Environment variable overrides
-  - `PM_AGENTS_OUTPUT_DIR`
-  - `PM_AGENTS_TIMEOUT`
+  - `PAGENT_OUTPUT_DIR`
+  - `PAGENT_TIMEOUT`
 
 ### FR-7: Error Handling
 
@@ -212,7 +212,7 @@ Five specialists with clear boundaries (no overlap):
 ### NFR-2: Usability
 
 - **NFR-2.1**: Zero configuration for basic use
-  - `pm-agents run prd.md` just works
+  - `pagent run prd.md` just works
 - **NFR-2.2**: Clear, actionable error messages
 - **NFR-2.3**: Progress indication during long operations
 - **NFR-2.4**: `--help` for all commands
@@ -236,13 +236,13 @@ Five specialists with clear boundaries (no overlap):
 
 **US-1.1**: As a PM, I want to run all specialists on my PRD with a single command.
 ```bash
-pm-agents run ./prd.md
+pagent run ./prd.md
 # Spawns 5 agents, waits for completion, outputs files
 ```
 
 **US-1.2**: As a PM, I want to see progress while agents work.
 ```bash
-pm-agents run ./prd.md
+pagent run ./prd.md
 # Output:
 # ✓ design: running...
 # ✓ tech: running...
@@ -254,14 +254,14 @@ pm-agents run ./prd.md
 
 **US-1.3**: As a PM, I want to run only specific specialists.
 ```bash
-pm-agents run ./prd.md --agents design,tech
+pagent run ./prd.md --agents design,tech
 ```
 
 ### Epic 2: Agent Interaction
 
 **US-2.1**: As a PM, I want to check if agents are still working.
 ```bash
-pm-agents status
+pagent status
 # Output:
 # design: stable (idle)
 # tech: running
@@ -270,13 +270,13 @@ pm-agents status
 
 **US-2.2**: As a PM, I want to send guidance to an agent that went off track.
 ```bash
-pm-agents message tech "Focus on REST API, not GraphQL"
+pagent message tech "Focus on REST API, not GraphQL"
 # Waits for agent to be idle, sends message, confirms
 ```
 
 **US-2.3**: As a PM, I want to see what an agent has done so far.
 ```bash
-pm-agents logs design
+pagent logs design
 # Shows conversation history
 ```
 
@@ -284,27 +284,27 @@ pm-agents logs design
 
 **US-3.1**: As a PM, I want to customize agent prompts for my domain.
 ```bash
-pm-agents init
-# Creates .pm-agents/config.yaml with defaults
+pagent init
+# Creates .pagent/config.yaml with defaults
 # Edit prompts as needed
 ```
 
 **US-3.2**: As a PM, I want to change output directory.
 ```bash
-pm-agents run ./prd.md --output ./docs/specs/
+pagent run ./prd.md --output ./docs/specs/
 ```
 
 ### Epic 4: Error Recovery
 
 **US-4.1**: As a PM, I want to stop everything if I made a mistake.
 ```bash
-pm-agents stop --all
+pagent stop --all
 # Kills all agents, confirms cleanup
 ```
 
 **US-4.2**: As a PM, I want to know why an agent failed.
 ```bash
-pm-agents run ./prd.md
+pagent run ./prd.md
 # Output:
 # ✗ security: failed (timeout waiting for stable state)
 # ✓ design: completed
@@ -315,7 +315,7 @@ pm-agents run ./prd.md
 ## Configuration File Format
 
 ```yaml
-# .pm-agents/config.yaml
+# .pagent/config.yaml
 
 output_dir: ./outputs
 timeout: 300  # seconds per agent
@@ -446,7 +446,7 @@ If v1 proves useful, consider:
 
 | Component | Effort | Notes |
 |-----------|--------|-------|
-| CLI framework + commands | 1-2 days | Cobra (Go) or Commander (TS) |
+| CLI framework + commands | 1-2 days | stdlib flag (Go) |
 | Agent spawner | 1 day | Process management, health checks |
 | Task router | 1 day | HTTP calls to AgentAPI |
 | Config loader | 0.5 day | YAML parsing, defaults |

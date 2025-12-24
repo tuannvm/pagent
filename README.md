@@ -1,14 +1,14 @@
-# PM Agent Workflow
+# Pagent
 
-[![Build & Verify](https://github.com/tuannvm/pm-agent-workflow/actions/workflows/build.yml/badge.svg)](https://github.com/tuannvm/pm-agent-workflow/actions/workflows/build.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/tuannvm/pm-agent-workflow)](https://goreportcard.com/report/github.com/tuannvm/pm-agent-workflow)
+[![Build & Verify](https://github.com/tuannvm/pagent/actions/workflows/build.yml/badge.svg)](https://github.com/tuannvm/pagent/actions/workflows/build.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tuannvm/pagent)](https://goreportcard.com/report/github.com/tuannvm/pagent)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A CLI tool that orchestrates Claude Code specialist agents to transform PRDs into actionable deliverables.
 
 ## Overview
 
-`pm-agents` uses the [AgentAPI](https://github.com/coder/agentapi) library to spawn and manage specialist agents that produce:
+`pagent` uses the [AgentAPI](https://github.com/coder/agentapi) library to spawn and manage specialist agents that produce:
 
 **Specification Documents:**
 - Design specifications
@@ -24,7 +24,7 @@ A CLI tool that orchestrates Claude Code specialist agents to transform PRDs int
 
 ```
 ┌─────────────────────────────────────────────────┐
-│           pm-agents (CLI orchestrator)           │
+│           pagent (CLI orchestrator)              │
 │  - Parse PRD, spawn agents, route tasks          │
 └─────────────────────┬───────────────────────────┘
                       │ HTTP (localhost)
@@ -47,19 +47,19 @@ A CLI tool that orchestrates Claude Code specialist agents to transform PRDs int
 - [Claude Code](https://claude.ai/claude-code) installed and authenticated
 - Go 1.21+ (for building from source)
 
-> **Note:** No external AgentAPI binary required. `pm-agents` uses the AgentAPI library directly.
+> **Note:** No external AgentAPI binary required. `pagent` uses the AgentAPI library directly.
 
 ## Installation
 
 ### From Releases
 
-Download the latest release from [GitHub Releases](https://github.com/tuannvm/pm-agent-workflow/releases).
+Download the latest release from [GitHub Releases](https://github.com/tuannvm/pagent/releases).
 
 ### From Source
 
 ```bash
-git clone https://github.com/tuannvm/pm-agent-workflow
-cd pm-agent-workflow
+git clone https://github.com/tuannvm/pagent
+cd pagent
 make build
 ```
 
@@ -73,7 +73,7 @@ make install
 
 ```bash
 # Run all 5 agents (specs + code) in dependency order
-pm-agents run ./prd.md --sequential -v
+pagent run ./prd.md --sequential -v
 
 # Output files will be in ./outputs/
 ls outputs/
@@ -90,7 +90,7 @@ cd outputs/code && go mod tidy && go build ./...
 ### Specs Only (No Code)
 
 ```bash
-pm-agents run ./prd.md --agents architect,qa,security --sequential
+pagent run ./prd.md --agents architect,qa,security --sequential
 ```
 
 ## Usage
@@ -99,57 +99,57 @@ pm-agents run ./prd.md --agents architect,qa,security --sequential
 
 ```bash
 # Run all agents in parallel (default)
-pm-agents run ./prd.md
+pagent run ./prd.md
 
 # Run specific agents only
-pm-agents run ./prd.md --agents design,tech
+pagent run ./prd.md --agents design,tech
 
 # Run in dependency order (sequential)
-pm-agents run ./prd.md --sequential
+pagent run ./prd.md --sequential
 
 # Custom output directory
-pm-agents run ./prd.md --output ./docs/specs/
+pagent run ./prd.md --output ./docs/specs/
 
 # With verbose output
-pm-agents run ./prd.md -v
+pagent run ./prd.md -v
 ```
 
 ### Monitor Agents
 
 ```bash
 # Check status of running agents
-pm-agents status
+pagent status
 
 # View agent conversation history
-pm-agents logs design
-pm-agents logs tech
+pagent logs design
+pagent logs tech
 ```
 
 ### Interact with Agents
 
 ```bash
 # Send guidance to an idle agent
-pm-agents message design "Focus more on mobile UX"
-pm-agents message tech "Use REST API, not GraphQL"
+pagent message design "Focus more on mobile UX"
+pagent message tech "Use REST API, not GraphQL"
 ```
 
 ### Stop Agents
 
 ```bash
 # Stop a specific agent
-pm-agents stop tech
+pagent stop tech
 
 # Stop all agents
-pm-agents stop --all
+pagent stop --all
 ```
 
 ### Configuration
 
 ```bash
 # Initialize config in current directory
-pm-agents init
+pagent init
 
-# This creates .pm-agents/config.yaml with default prompts
+# This creates .pagent/config.yaml with default prompts
 # Edit to customize agent behavior
 ```
 
@@ -157,13 +157,13 @@ pm-agents init
 
 ```bash
 # List all agent types
-pm-agents agents list
+pagent agents list
 
 # Show agent prompt template
-pm-agents agents show design
+pagent agents show design
 
 # Print version
-pm-agents version
+pagent version
 ```
 
 ## Specialist Agents
@@ -187,7 +187,7 @@ pm-agents version
 
 ## Configuration
 
-Create `.pm-agents/config.yaml` to customize:
+Create `.pagent/config.yaml` to customize:
 
 ```yaml
 output_dir: ./outputs
@@ -260,8 +260,8 @@ agents:
 
 ### Environment Variables
 
-- `PM_AGENTS_OUTPUT_DIR` - Override output directory
-- `PM_AGENTS_TIMEOUT` - Override timeout (seconds)
+- `PAGENT_OUTPUT_DIR` - Override output directory
+- `PAGENT_TIMEOUT` - Override timeout (seconds)
 
 ## How It Works
 
@@ -335,8 +335,8 @@ make help
 ### Project Structure
 
 ```
-pm-agent-workflow/
-├── cmd/pm-agents/           # Entry point
+pagent/
+├── cmd/pagent/              # Entry point (pagent binary)
 ├── internal/
 │   ├── agent/               # Agent lifecycle management and orchestration
 │   │   ├── manager.go       # Core orchestration, RunAgent, state management
@@ -366,7 +366,7 @@ pm-agent-workflow/
 - [Framework Comparison](docs/02-framework-comparison.md) - Claude SDK vs alternatives analysis
 - [Requirements](docs/03-requirements.md) - Full requirements specification
 - [Implementation](docs/04-implementation-plan.md) - Implementation details and architecture
-- [User Tutorial](docs/05-tutorial.md) - Step-by-step guide to using pm-agents
+- [User Tutorial](docs/05-tutorial.md) - Step-by-step guide to using pagent
 
 ## Limitations (v1)
 
@@ -382,14 +382,14 @@ pm-agent-workflow/
 ### "timeout waiting for agent"
 
 - Check if Claude Code is authenticated: `claude --version`
-- Increase timeout: `pm-agents run prd.md --timeout 600`
-- Check agent logs: `pm-agents logs <agent>`
+- Increase timeout: `pagent run prd.md --timeout 600`
+- Check agent logs: `pagent logs <agent>`
 
 ### "port already in use"
 
 Kill existing processes:
 ```bash
-pm-agents stop --all
+pagent stop --all
 # Or manually:
 lsof -i :3284-3290 | awk 'NR>1 {print $2}' | xargs kill
 ```
@@ -422,4 +422,3 @@ Server flags: `--port` (default 3284), `--type`, `--allowed-hosts`, `--initial-p
 
 - [AgentAPI](https://github.com/coder/agentapi) - Go library for Claude Code process management
 - [Claude Code](https://claude.ai/claude-code) - AI coding assistant
-- [Cobra](https://github.com/spf13/cobra) - CLI framework

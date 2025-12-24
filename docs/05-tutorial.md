@@ -1,6 +1,6 @@
-# User Tutorial: PM Agent Workflow
+# User Tutorial: Pagent
 
-This tutorial walks you through using `pm-agents` to transform a PRD into comprehensive deliverables.
+This tutorial walks you through using `pagent` to transform a PRD into comprehensive deliverables.
 
 ## Prerequisites
 
@@ -12,11 +12,11 @@ Before starting, ensure you have:
    claude --version
    ```
 
-2. **pm-agents** CLI:
+2. **pagent** CLI:
    ```bash
    # Build from source
-   git clone https://github.com/tuannvm/pm-agent-workflow
-   cd pm-agent-workflow
+   git clone https://github.com/tuannvm/pagent
+   cd pagent
    make build
 
    # Or install to PATH
@@ -46,7 +46,7 @@ EOF
 ### Step 2: Run All Agents
 
 ```bash
-pm-agents run ./my-prd.md
+pagent run ./my-prd.md
 ```
 
 This spawns 5 specialist agents in dependency order:
@@ -66,7 +66,7 @@ While agents are running, monitor their status:
 
 ```bash
 # Check which agents are running
-pm-agents status
+pagent status
 
 # Output:
 # AGENT     PORT  STATUS
@@ -80,7 +80,7 @@ pm-agents status
 See what an agent is doing:
 
 ```bash
-pm-agents logs design
+pagent logs design
 ```
 
 ### Step 5: Send Guidance (Optional)
@@ -88,7 +88,7 @@ pm-agents logs design
 If an agent needs redirection:
 
 ```bash
-pm-agents message design "Focus more on mobile UX"
+pagent message design "Focus more on mobile UX"
 ```
 
 ### Step 6: Collect Outputs
@@ -122,103 +122,103 @@ cd outputs/code && go mod tidy && go build ./...
 
 ## Command Reference
 
-### `pm-agents run`
+### `pagent run`
 
 Run specialist agents on a PRD.
 
 ```bash
 # Run all 5 agents in dependency order (recommended)
-pm-agents run ./prd.md --sequential
+pagent run ./prd.md --sequential
 
 # Run spec agents only (documentation)
-pm-agents run ./prd.md --agents architect,qa,security --sequential
+pagent run ./prd.md --agents architect,qa,security --sequential
 
 # Run implementation agents only (requires specs to exist)
-pm-agents run ./prd.md --agents implementer,verifier --sequential
+pagent run ./prd.md --agents implementer,verifier --sequential
 
 # Run specific agent
-pm-agents run ./prd.md --agents architect
+pagent run ./prd.md --agents architect
 
 # Custom output directory
-pm-agents run ./prd.md --output ./docs/specs/
+pagent run ./prd.md --output ./docs/specs/
 
 # With verbose output
-pm-agents run ./prd.md -v
+pagent run ./prd.md -v
 
 # Custom timeout (seconds per agent)
-pm-agents run ./prd.md --timeout 600
+pagent run ./prd.md --timeout 600
 ```
 
-### `pm-agents status`
+### `pagent status`
 
 Check status of running agents.
 
 ```bash
-pm-agents status
+pagent status
 ```
 
-### `pm-agents logs`
+### `pagent logs`
 
 View agent conversation history.
 
 ```bash
-pm-agents logs <agent-name>
+pagent logs <agent-name>
 
 # Examples:
-pm-agents logs design
-pm-agents logs tech
+pagent logs design
+pagent logs tech
 ```
 
-### `pm-agents message`
+### `pagent message`
 
 Send guidance to an idle agent.
 
 ```bash
-pm-agents message <agent-name> "<message>"
+pagent message <agent-name> "<message>"
 
 # Examples:
-pm-agents message design "Add dark mode support"
-pm-agents message tech "Use GraphQL instead of REST"
+pagent message design "Add dark mode support"
+pagent message tech "Use GraphQL instead of REST"
 ```
 
-### `pm-agents stop`
+### `pagent stop`
 
 Stop running agents.
 
 ```bash
 # Stop specific agent
-pm-agents stop design
+pagent stop design
 
 # Stop all agents
-pm-agents stop --all
+pagent stop --all
 ```
 
-### `pm-agents init`
+### `pagent init`
 
 Initialize configuration in current directory.
 
 ```bash
-pm-agents init
-# Creates .pm-agents/config.yaml
+pagent init
+# Creates .pagent/config.yaml
 ```
 
-### `pm-agents agents`
+### `pagent agents`
 
 List and show agent definitions.
 
 ```bash
 # List all agents
-pm-agents agents list
+pagent agents list
 
 # Show agent prompt template
-pm-agents agents show design
+pagent agents show design
 ```
 
 ## Configuration
 
 ### Default Configuration
 
-Run `pm-agents init` to create `.pm-agents/config.yaml`:
+Run `pagent init` to create `.pagent/config.yaml`:
 
 ```yaml
 output_dir: ./outputs
@@ -285,7 +285,7 @@ Choose an implementation style based on your needs:
 
 ```bash
 # Override persona via CLI
-pm-agents run prd.md --persona minimal
+pagent run prd.md --persona minimal
 ```
 
 ### Customizing Technology Stack
@@ -321,10 +321,10 @@ Override settings via environment:
 
 ```bash
 # Override output directory
-PM_AGENTS_OUTPUT_DIR=./docs pm-agents run prd.md
+PAGENT_OUTPUT_DIR=./docs pagent run prd.md
 
 # Override timeout
-PM_AGENTS_TIMEOUT=600 pm-agents run prd.md
+PAGENT_TIMEOUT=600 pagent run prd.md
 ```
 
 ## Execution Modes
@@ -334,7 +334,7 @@ PM_AGENTS_TIMEOUT=600 pm-agents run prd.md
 Agents run concurrently within dependency levels:
 
 ```bash
-pm-agents run ./prd.md
+pagent run ./prd.md
 ```
 
 **How it works:**
@@ -354,7 +354,7 @@ Level 3: verifier
 Agents run one at a time in dependency order:
 
 ```bash
-pm-agents run ./prd.md --sequential
+pagent run ./prd.md --sequential
 ```
 
 - Strictest ordering: architect → qa → security → implementer → verifier
@@ -366,7 +366,7 @@ pm-agents run ./prd.md --sequential
 Skip agents whose outputs are already up-to-date:
 
 ```bash
-pm-agents run ./prd.md --resume
+pagent run ./prd.md --resume
 ```
 
 **Change detection uses content hashing (SHA-256):**
@@ -376,7 +376,7 @@ pm-agents run ./prd.md --resume
 
 ```bash
 # Force regeneration of all outputs
-pm-agents run ./prd.md --force
+pagent run ./prd.md --force
 ```
 
 ## Troubleshooting
@@ -394,13 +394,13 @@ sudo mv agentapi /usr/local/bin/
 
 - Increase timeout: `--timeout 600`
 - Check Claude Code authentication: `claude --version`
-- Check agent logs: `pm-agents logs <agent>`
+- Check agent logs: `pagent logs <agent>`
 
 ### "port already in use"
 
 Kill existing processes:
 ```bash
-pm-agents stop --all
+pagent stop --all
 
 # Or manually:
 lsof -i :3284-3290 | awk 'NR>1 {print $2}' | xargs kill
@@ -410,14 +410,14 @@ lsof -i :3284-3290 | awk 'NR>1 {print $2}' | xargs kill
 
 Send additional guidance:
 ```bash
-pm-agents message design "Please complete the component specifications section"
+pagent message design "Please complete the component specifications section"
 ```
 
 ### Want to restart a specific agent
 
 ```bash
-pm-agents stop design
-pm-agents run ./prd.md --agents design
+pagent stop design
+pagent run ./prd.md --agents design
 ```
 
 ## Example Workflows
@@ -429,7 +429,7 @@ Generate specification documents from a PRD:
 ```bash
 # 1. Initialize project
 mkdir my-project && cd my-project
-pm-agents init
+pagent init
 
 # 2. Create PRD
 cat > prd.md << 'EOF'
@@ -438,7 +438,7 @@ cat > prd.md << 'EOF'
 EOF
 
 # 3. Run spec agents only
-pm-agents run ./prd.md --agents architect,qa,security --sequential -v
+pagent run ./prd.md --agents architect,qa,security --sequential -v
 
 # 4. Check outputs
 ls outputs/
@@ -451,10 +451,10 @@ Generate specs AND working code from a PRD:
 
 ```bash
 # 1. Run all 5 agents in sequential mode (recommended)
-pm-agents run ./prd.md --sequential -v
+pagent run ./prd.md --sequential -v
 
 # 2. Monitor progress (in another terminal)
-pm-agents status
+pagent status
 
 # 3. Check generated outputs
 ls outputs/
@@ -481,13 +481,13 @@ Run spec agents first, review, then generate code:
 
 ```bash
 # Step 1: Generate architecture
-pm-agents run ./prd.md --agents architect --sequential -v
+pagent run ./prd.md --agents architect --sequential -v
 
 # Step 2: Review and provide feedback
-pm-agents message architect "Use Chi router instead of standard library"
+pagent message architect "Use Chi router instead of standard library"
 
 # Step 3: Run remaining agents after architecture is finalized
-pm-agents run ./prd.md --agents qa,security,implementer,verifier --sequential -v
+pagent run ./prd.md --agents qa,security,implementer,verifier --sequential -v
 
 # Step 4: Verify
 cd outputs/code && go build ./...
@@ -500,7 +500,7 @@ cd outputs/code && go build ./...
 3. **Choose the right persona**: `minimal` for prototypes, `balanced` for most projects, `production` for enterprise
 4. **Customize the stack** to match your infrastructure (cloud, database, CI/CD)
 5. **Use verbose mode** (`-v`) to see what's happening
-6. **Check logs** if an agent seems stuck (`pm-agents logs <agent>`)
+6. **Check logs** if an agent seems stuck (`pagent logs <agent>`)
 7. **Increase timeout** for complex tasks (`--timeout 600`)
 
 ## Next Steps
