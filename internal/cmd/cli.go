@@ -33,6 +33,8 @@ func Execute() error {
 	switch cmd {
 	case "run":
 		return runMain(os.Args[2:])
+	case "ui":
+		return uiMain(os.Args[2:])
 	case "init":
 		return initMain(os.Args[2:])
 	case "status":
@@ -66,6 +68,7 @@ Usage:
 
 Commands:
   run <input>       Run specialist agents on input files
+  ui [input]        Interactive dashboard for running agents
   init              Initialize pagent configuration
   status            Check status of running agents
   logs <agent>      View agent conversation history
@@ -77,6 +80,8 @@ Commands:
 
 Examples:
   pagent run ./prd.md
+  pagent ui
+  pagent ui ./prd.md
   pagent run ./prd.md -a architect,qa -s
   pagent init
   pagent status
@@ -96,10 +101,6 @@ func logVerbose(format string, args ...interface{}) {
 	if verbose && !quiet {
 		_, _ = fmt.Fprintf(os.Stdout, "[DEBUG] "+format+"\n", args...)
 	}
-}
-
-func logError(format string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stderr, "Error: "+format+"\n", args...)
 }
 
 // parseGlobalFlags extracts -v and -q from args, returns remaining args
