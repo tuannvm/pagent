@@ -28,14 +28,57 @@ archives:
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
 
+# Enhanced changelog with conventional commits support
 changelog:
+  use: github
   sort: asc
+  abbrev: 7
+
+  # Group commits by type (conventional commits)
+  groups:
+    - title: 🚀 Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: 🐛 Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: 📚 Documentation
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: 🎨 Styling
+      regexp: '^.*?style(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: ♻️ Refactoring
+      regexp: '^.*?refactor(\([[:word:]]+\))??!?:.+$'
+      order: 4
+    - title: ⚡ Performance Improvements
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 5
+    - title: ✅ Tests
+      regexp: '^.*?test(\([[:word:]]+\))??!?:.+$'
+      order: 6
+    - title: 🔧 Build System
+      regexp: '^.*?build(\([[:word:]]+\))??!?:.+$'
+      order: 7
+    - title: 👷 CI/CD
+      regexp: '^.*?ci(\([[:word:]]+\))??!?:.+$'
+      order: 8
+    - title: 🔨 Other Changes
+      order: 999
+
   filters:
+    # Exclude certain commit types from changelog
     exclude:
-      - "^docs:"
-      - "^test:"
-      - "^ci:"
-      - "^chore:"
+      - '^chore:'
+      - '^chore\('
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - 'merge conflict'
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+      - go mod tidy
 
 release:
   draft: false

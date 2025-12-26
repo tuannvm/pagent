@@ -4,42 +4,41 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/tuannvm/pagent)](https://goreportcard.com/report/github.com/tuannvm/pagent)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A CLI tool that orchestrates Claude Code specialist agents to transform PRDs into actionable deliverables.
+CLI tool that orchestrates Claude Code agents to transform PRDs into specs and working code.
 
-## Overview
+```mermaid
+flowchart LR
+    PRD[PRD.md] --> A[architect]
+    A --> Q[qa]
+    A --> S[security]
+    Q & S --> I[implementer]
+    I --> V[verifier]
+    V --> O[outputs/]
 
-`pagent` uses the [AgentAPI](https://github.com/coder/agentapi) library to spawn and manage specialist agents that produce:
+    subgraph Specs
+        A
+        Q
+        S
+    end
 
-**Specification Documents:**
-- Design specifications
-- Technical requirements documents
-- Test plans
-- Security assessments
-- Infrastructure plans
-
-**Working Code (Developer Agents):**
-- Go backend API implementation
-- PostgreSQL database migrations
-- Unit and integration tests
-
+    subgraph Code
+        I
+        V
+    end
 ```
-┌─────────────────────────────────────────────────┐
-│           pagent (CLI orchestrator)              │
-│  - Parse PRD, spawn agents, route tasks          │
-└─────────────────────┬───────────────────────────┘
-                      │ HTTP (localhost)
-        ┌─────────────┼─────────────┐
-        ▼             ▼             ▼
-   AgentAPI:3284  AgentAPI:3285  AgentAPI:3286
-        │             │             │
-        ▼             ▼             ▼
-   Claude Code    Claude Code   Claude Code
-   (Design)       (Tech)        (QA)
-        │             │             │
-        └─────────────┴─────────────┘
-                      │
-               Shared filesystem
-            (prd.md, outputs/*.md)
+
+## Quick Start
+
+```bash
+# Install
+git clone https://github.com/tuannvm/pagent && cd pagent && make install
+
+# Run all agents on a PRD
+pagent run ./prd.md --sequential -v
+
+# Check outputs
+ls outputs/
+# architecture.md, test-plan.md, security-assessment.md, code/
 ```
 
 ## Prerequisites
@@ -47,395 +46,80 @@ A CLI tool that orchestrates Claude Code specialist agents to transform PRDs int
 - [Claude Code](https://claude.ai/claude-code) installed and authenticated
 - Go 1.21+ (for building from source)
 
-> **Note:** No external AgentAPI binary required. `pagent` uses the AgentAPI library directly.
-
 ## Installation
 
-### From Releases
+**From releases:** Download from [GitHub Releases](https://github.com/tuannvm/pagent/releases)
 
-Download the latest release from [GitHub Releases](https://github.com/tuannvm/pagent/releases).
-
-### From Source
-
+**From source:**
 ```bash
 git clone https://github.com/tuannvm/pagent
 cd pagent
-make build
-```
-
-### Install to PATH
-
-```bash
 make install
 ```
 
-## Quick Start
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `pagent run <prd>` | Run agents on PRD |
+| `pagent ui [prd]` | Interactive dashboard |
+| `pagent status` | Check running agents |
+| `pagent logs <agent>` | View agent output |
+| `pagent message <agent> "msg"` | Send guidance |
+| `pagent stop [--all]` | Stop agents |
+| `pagent init` | Create config file |
+
+### Common Options
 
 ```bash
-# Run all 5 agents (specs + code) in dependency order
-pagent run ./prd.md --sequential -v
-
-# Output files will be in ./outputs/
-ls outputs/
-# architecture.md          <- System design (architect)
-# test-plan.md             <- Test cases (qa)
-# security-assessment.md   <- Security review (security)
-# verification-report.md   <- Compliance check (verifier)
-# code/                    <- Complete codebase (implementer)
-
-# Verify generated code compiles
-cd outputs/code && go mod tidy && go build ./...
+pagent run prd.md --agents architect,qa   # Run specific agents
+pagent run prd.md --sequential            # Run in dependency order
+pagent run prd.md --resume                # Skip up-to-date outputs
+pagent run prd.md --output ./docs/        # Custom output directory
+pagent run prd.md --persona minimal       # Use minimal persona
 ```
 
-### Specs Only (No Code)
+## Agents
 
-```bash
-pagent run ./prd.md --agents architect,qa,security --sequential
-```
-
-## Usage
-
-### Interactive Dashboard
-
-```bash
-# Launch the interactive TUI dashboard
-pagent ui
-
-# Pre-fill with input file
-pagent ui ./prd.md
-```
-
-The dashboard provides a visual interface for configuring and running agents - no flags to memorize.
-
-### Run Agents
-
-```bash
-# Run all agents in parallel (default)
-pagent run ./prd.md
-
-# Run specific agents only
-pagent run ./prd.md --agents design,tech
-
-# Run in dependency order (sequential)
-pagent run ./prd.md --sequential
-
-# Custom output directory
-pagent run ./prd.md --output ./docs/specs/
-
-# With verbose output
-pagent run ./prd.md -v
-```
-
-### Monitor Agents
-
-```bash
-# Check status of running agents
-pagent status
-
-# View agent conversation history
-pagent logs design
-pagent logs tech
-```
-
-### Interact with Agents
-
-```bash
-# Send guidance to an idle agent
-pagent message design "Focus more on mobile UX"
-pagent message tech "Use REST API, not GraphQL"
-```
-
-### Stop Agents
-
-```bash
-# Stop a specific agent
-pagent stop tech
-
-# Stop all agents
-pagent stop --all
-```
-
-### Configuration
-
-```bash
-# Initialize config in current directory
-pagent init
-
-# This creates .pagent/config.yaml with default prompts
-# Edit to customize agent behavior
-```
-
-### Other Commands
-
-```bash
-# List all agent types
-pagent agents list
-
-# Show agent prompt template
-pagent agents show design
-
-# Print version
-pagent version
-```
-
-## Specialist Agents
-
-### Specification Phase
-
-| Agent | Output | Dependencies | Role |
-|-------|--------|--------------|------|
-| architect | `architecture.md` | - | System design, API, data models |
-| qa | `test-plan.md` | architect | Test strategy and cases |
-| security | `security-assessment.md` | architect | Threat model, mitigations |
-
-### Implementation Phase
-
-| Agent | Output | Dependencies | Role |
-|-------|--------|--------------|------|
-| implementer | `code/*` | architect, security | ALL code (API, DB, migrations) |
-| verifier | `code/*_test.go` | implementer, qa | Tests + verification report |
-
-**Key Design:** Single `implementer` owns all code to prevent conflicts. Single `verifier` validates against specs.
+| Agent | Output | Role |
+|-------|--------|------|
+| architect | `architecture.md` | System design, API, data models |
+| qa | `test-plan.md` | Test strategy and cases |
+| security | `security-assessment.md` | Threat model, mitigations |
+| implementer | `code/*` | Complete codebase |
+| verifier | `code/*_test.go` | Tests + verification |
 
 ## Configuration
 
-Create `.pagent/config.yaml` to customize:
+Run `pagent init` to create `.pagent/config.yaml`. Key options:
 
-```yaml
-output_dir: ./outputs
-timeout: 300  # seconds per agent
+- **persona**: `minimal` | `balanced` | `production`
+- **preferences**: API style, testing depth, language
+- **stack**: Cloud, database, CI/CD choices
 
-# Implementation style (minimal, balanced, production)
-persona: balanced
-
-# Architecture preferences
-preferences:
-  stateless: false          # true = event-driven, false = database-backed
-  api_style: rest           # rest, graphql, grpc
-  language: go              # go, python, typescript, java, rust
-  testing_depth: unit       # none, unit, integration, e2e
-  documentation_level: standard  # minimal, standard, comprehensive
-  dependency_style: minimal      # minimal (stdlib), standard, batteries
-  error_handling: structured     # simple, structured, comprehensive
-  containerized: true       # Generate Dockerfile
-  include_ci: true          # Generate CI/CD pipelines
-  include_iac: true         # Generate Terraform/K8s manifests
-
-# Technology stack
-stack:
-  cloud: aws
-  compute: kubernetes
-  database: postgres
-  cache: redis
-  message_queue: kafka      # Only needed if stateless: true
-  iac: terraform
-  gitops: argocd
-  ci: github-actions
-  monitoring: prometheus
-  logging: stdout
-
-# Agent customization
-agents:
-  architect:
-    output: architecture.md
-    depends_on: []
-
-  qa:
-    output: test-plan.md
-    depends_on: [architect]
-
-  security:
-    output: security-assessment.md
-    depends_on: [architect]
-
-  implementer:
-    output: code/.complete
-    depends_on: [architect, security]
-
-  verifier:
-    output: code/.verified
-    depends_on: [implementer, qa]
-```
-
-### Personas
-
-| Persona | Use Case | Key Characteristics |
-|---------|----------|---------------------|
-| `minimal` | MVP, prototype | Ship fast, simple code, skip observability |
-| `balanced` | Growing product | Essential quality, maintainable code |
-| `production` | Enterprise | Comprehensive testing, security, observability |
-
-### Prompt Variables
-
-- `{prd_path}` - Absolute path to the PRD file
-- `{output_path}` - Absolute path to the output file
-
-### Environment Variables
-
-- `PAGENT_OUTPUT_DIR` - Override output directory
-- `PAGENT_TIMEOUT` - Override timeout (seconds)
-
-## How It Works
-
-1. **Parse PRD** - Reads the PRD file path
-2. **Spawn Agents** - Uses AgentAPI library to start Claude Code processes directly (no external binary)
-3. **Health Check** - Polls `GET /status` until agent responds (2 min timeout)
-4. **Send Task** - `POST /message` with prompt containing PRD path and output path
-5. **Monitor** - Polls `/status` until `running` -> `stable` transition
-6. **Cleanup** - Gracefully terminates agent processes on completion/interrupt
-
-### Parallel vs Sequential
-
-**Parallel mode (default):**
-- Agents run concurrently within dependency levels
-- Level 0: `architect` (no dependencies)
-- Level 1: `qa`, `security` (both depend only on architect, run in parallel)
-- Level 2: `implementer` (depends on architect, security)
-- Level 3: `verifier` (depends on implementer, qa)
-- Each level must complete before the next starts
-- Faster than sequential while respecting dependencies
-
-**Sequential mode (`--sequential`):**
-- Agents run in strict dependency order (topological sort)
-- Each agent waits for the previous to complete
-- Slowest but most predictable
-
-**Resume mode (`--resume`):**
-- Skips agents whose outputs are up-to-date
-- Detects changes via content hashing (SHA-256):
-  - Input files changed?
-  - Configuration (persona, stack, preferences) changed?
-  - Dependency outputs changed?
-- Use `--force` to override and regenerate all
-
-## Development
-
-### Prerequisites
-
-- Go 1.21+
-- [golangci-lint](https://golangci-lint.run/) (for linting)
-- [goreleaser](https://goreleaser.com/) (for releases)
-
-### Commands
-
-```bash
-# Build
-make build
-
-# Run tests
-make test
-
-# Run linter
-make lint
-
-# Format code
-make fmt
-
-# Build for all platforms
-make build-all
-
-# Create release snapshot
-make release-snapshot
-
-# Clean
-make clean
-
-# Show all targets
-make help
-```
-
-### Project Structure
-
-```
-pagent/
-├── cmd/pagent/              # Entry point (pagent binary)
-├── internal/
-│   ├── agent/               # Agent lifecycle management and orchestration
-│   │   ├── manager.go       # Core orchestration, RunAgent, state management
-│   │   ├── executor.go      # Agent lifecycle (spawn, wait, stop)
-│   │   ├── scheduler.go     # Dependency resolution (topological sort)
-│   │   ├── orchestrator.go  # Interface abstraction for testability
-│   │   └── agentapi_lib.go  # AgentAPI library client integration
-│   ├── api/                 # HTTP client for agent status polling
-│   ├── cmd/                 # CLI commands (run, ui, status, etc.)
-│   ├── config/              # Configuration loading and shared RunOptions
-│   ├── input/               # Input file discovery (single file or directory)
-│   ├── postprocess/         # Post-execution actions (diff summary, PR description)
-│   ├── prompt/              # Prompt template loading and rendering
-│   ├── runner/              # Shared execution logic for CLI and TUI
-│   ├── state/               # Resume state management (content hashing)
-│   ├── tui/                 # Interactive terminal UI (charmbracelet/huh)
-│   └── types/               # Shared type definitions (TechStack, Preferences)
-├── .github/workflows/       # CI/CD pipelines
-├── docs/                    # Documentation
-├── examples/                # Sample PRDs and config files
-├── .goreleaser.yml          # Release configuration
-├── .golangci.yml            # Linter configuration
-└── Makefile                 # Build automation
-```
+See [Tutorial](docs/05-tutorial.md#configuration) for full config reference.
 
 ## Documentation
 
-- [Research Summary](docs/01-research-summary.md) - Background research on multi-agent systems
-- [Framework Comparison](docs/02-framework-comparison.md) - Claude SDK vs alternatives analysis
-- [Requirements](docs/03-requirements.md) - Full requirements specification
-- [Implementation](docs/04-implementation-plan.md) - Implementation details and architecture
-- [User Tutorial](docs/05-tutorial.md) - Step-by-step guide to using pagent
-- [Architecture Refactor](docs/06-architecture-refactor.md) - Code architecture and refactoring notes
-- [TUI Plan](docs/07-huh-ui-plan.md) - Interactive dashboard design
-- [TUI Implementation](docs/08-huh-ui-implementation.md) - TUI implementation guide
-
-## Limitations (v1)
-
-- No web dashboard (terminal TUI only)
-- No database persistence (state stored in JSON files)
-- No approval gates (agents run autonomously)
-- No mid-session resume (crash = restart from beginning)
-- macOS/Linux only (no Windows)
-- Generated code may require minor fixes (verified to compile with `go build`)
+| Doc | Content |
+|-----|---------|
+| [Tutorial](docs/05-tutorial.md) | Step-by-step usage guide |
+| [Implementation](docs/04-implementation-plan.md) | Architecture and internals |
+| [Architecture Refactor](docs/06-architecture-refactor.md) | Code structure notes |
+| [TUI Guide](docs/08-huh-ui-implementation.md) | Interactive UI details |
 
 ## Troubleshooting
 
-### "timeout waiting for agent"
+**"timeout waiting for agent"** - Check `claude --version`, increase `--timeout 600`
 
-- Check if Claude Code is authenticated: `claude --version`
-- Increase timeout: `pagent run prd.md --timeout 600`
-- Check agent logs: `pagent logs <agent>`
+**"port already in use"** - Run `pagent stop --all`
 
-### "port already in use"
-
-Kill existing processes:
-```bash
-pagent stop --all
-# Or manually:
-lsof -i :3284-3290 | awk 'NR>1 {print $2}' | xargs kill
-```
+See [Tutorial - Troubleshooting](docs/05-tutorial.md#troubleshooting) for more.
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run `make lint test`
-5. Submit a pull request
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
 MIT
-
-## AgentAPI Reference
-
-This tool uses [AgentAPI](https://github.com/coder/agentapi) endpoints (verified against OpenAPI spec):
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/status` | GET | Returns `{"status": "running"\|"stable"}` |
-| `/message` | POST | Send `{"content": "...", "type": "user"}` |
-| `/messages` | GET | Get conversation history |
-
-Server flags: `--port` (default 3284), `--type`, `--allowed-hosts`, `--initial-prompt`
-
-## Acknowledgments
-
-- [AgentAPI](https://github.com/coder/agentapi) - Go library for Claude Code process management
-- [Claude Code](https://claude.ai/claude-code) - AI coding assistant
