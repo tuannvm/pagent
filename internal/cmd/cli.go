@@ -103,10 +103,6 @@ func logVerbose(format string, args ...interface{}) {
 	}
 }
 
-func logError(format string, args ...interface{}) {
-	_, _ = fmt.Fprintf(os.Stderr, "Error: "+format+"\n", args...)
-}
-
 // parseGlobalFlags extracts -v and -q from args, returns remaining args
 func parseGlobalFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&verbose, "v", false, "verbose output")

@@ -40,7 +40,7 @@ func Execute(ctx context.Context, opts config.RunOptions, logger Logger) error {
 	}
 
 	// Apply options to config
-	if err := applyOptions(cfg, opts); err != nil {
+	if err = applyOptions(cfg, opts); err != nil {
 		return err
 	}
 
