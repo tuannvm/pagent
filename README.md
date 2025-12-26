@@ -33,12 +33,35 @@ flowchart LR
 # Install
 git clone https://github.com/tuannvm/pagent && cd pagent && make install
 
-# Run all agents on a PRD
-pagent run ./prd.md --sequential -v
+# Launch the interactive TUI
+pagent ui
+```
 
-# Check outputs
-ls outputs/
-# architecture.md, test-plan.md, security-assessment.md, code/
+The TUI guides you through selecting a PRD, persona, and running agents:
+
+```
+ ██████╗  █████╗  ██████╗ ███████╗███╗   ██╗████████╗
+ ██╔══██╗██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝
+ ██████╔╝███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║
+ ██╔═══╝ ██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║
+ ██║     ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║
+ ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝
+
+ From idea to implementation, orchestrated.
+
+ Input                       Persona
+ > examples/sample-prd.md    > Balanced - Standard
+
+ Output                      Action
+ > ./outputs                 > ▶ Run
+
+ ↑ up · ↓ down · / filter · enter select
+```
+
+Or use the CLI directly:
+
+```bash
+pagent run ./prd.md --sequential -v
 ```
 
 ## Prerequisites
