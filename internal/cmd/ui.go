@@ -1,11 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"flag"
 	"fmt"
-	"strings"
 
 	"github.com/tuannvm/pagent/internal/config"
+	"github.com/tuannvm/pagent/internal/runner"
 	"github.com/tuannvm/pagent/internal/tui"
 )
 
@@ -52,8 +53,8 @@ Examples:
 		prefilledInput = fs.Arg(0)
 	}
 
-	// Run the dashboard
-	result, err := tui.RunDashboard(tui.DashboardOptions{
+	// Run the dashboard - returns *config.RunOptions directly
+	opts, err := tui.RunDashboard(tui.DashboardOptions{
 		PrefilledInput: prefilledInput,
 		Config:         cfg,
 		Accessible:     accessible,
@@ -62,68 +63,27 @@ Examples:
 		return err
 	}
 
-	if result.Cancelled {
+	// nil opts means user cancelled
+	if opts == nil {
 		logInfo("Cancelled")
 		return nil
 	}
 
 	// Validate input
-	if result.InputPath == "" {
+	if opts.InputPath == "" {
 		return fmt.Errorf("no input file specified")
 	}
 
-	// Build args for runMain
-	runArgs := []string{result.InputPath}
-
-	if !result.AllAgents && len(result.Agents) > 0 {
-		runArgs = append(runArgs, "-a", strings.Join(result.Agents, ","))
-	}
-
-	if result.Persona != "" && result.Persona != "balanced" {
-		runArgs = append(runArgs, "-p", result.Persona)
-	}
-
-	if result.OutputDir != "" && result.OutputDir != "./outputs" {
-		runArgs = append(runArgs, "-o", result.OutputDir)
-	}
-
-	if result.Sequential {
-		runArgs = append(runArgs, "-s")
-	}
-
-	switch result.ResumeMode {
-	case "resume":
-		runArgs = append(runArgs, "-r")
-	case "force":
-		runArgs = append(runArgs, "-f")
-	}
-
-	switch result.Architecture {
-	case "stateless":
-		runArgs = append(runArgs, "--stateless")
-	case "database":
-		runArgs = append(runArgs, "--no-stateless")
-	}
-
-	if result.Timeout > 0 {
-		runArgs = append(runArgs, "-t", fmt.Sprintf("%d", result.Timeout))
-	}
-
-	if result.ConfigPath != "" {
-		runArgs = append(runArgs, "-c", result.ConfigPath)
-	}
-
-	switch result.Verbosity {
-	case "verbose":
-		runArgs = append(runArgs, "-v")
-	case "quiet":
-		runArgs = append(runArgs, "-q")
+	// Validate agent selection
+	if len(opts.Agents) == 0 {
+		return fmt.Errorf("no agents selected")
 	}
 
 	// Display what we're about to run
-	logInfo("Running: pagent run %s", strings.Join(runArgs, " "))
+	logInfo("Running pagent with %d agents...", len(opts.Agents))
 	logInfo("")
 
-	// Execute run command
-	return runMain(runArgs)
+	// Execute directly using the shared runner - NO TRANSLATION LAYER!
+	logger := runner.NewStdLogger(opts.IsVerbose(), opts.IsQuiet())
+	return runner.Execute(context.Background(), *opts, logger)
 }

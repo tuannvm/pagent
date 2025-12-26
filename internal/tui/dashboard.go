@@ -11,22 +11,6 @@ import (
 	"golang.org/x/term"
 )
 
-// DashboardResult contains the user's selections from the dashboard
-type DashboardResult struct {
-	InputPath    string
-	Agents       []string
-	AllAgents    bool
-	Persona      string
-	OutputDir    string
-	Sequential   bool
-	ResumeMode   string // "normal", "resume", "force"
-	Architecture string // "config", "stateless", "database"
-	Timeout      int
-	ConfigPath   string
-	Verbosity    string // "normal", "verbose", "quiet"
-	Cancelled    bool
-}
-
 // DashboardOptions configures the dashboard
 type DashboardOptions struct {
 	PrefilledInput string
@@ -34,33 +18,24 @@ type DashboardOptions struct {
 	Accessible     bool
 }
 
-// RunDashboard displays the interactive single-screen form
-func RunDashboard(opts DashboardOptions) (*DashboardResult, error) {
-	cfg := opts.Config
+// RunDashboard displays the interactive single-screen form.
+// Returns nil, nil if the user cancels.
+func RunDashboard(dashOpts DashboardOptions) (*config.RunOptions, error) {
+	cfg := dashOpts.Config
 	if cfg == nil {
 		cfg = config.Default()
 	}
 
 	// Auto-enable accessible mode for non-terminals
-	accessible := opts.Accessible || !isTerminal()
+	accessible := dashOpts.Accessible || !isTerminal()
 
 	// Initialize result with defaults from config
-	result := &DashboardResult{
-		InputPath:    opts.PrefilledInput,
-		AllAgents:    true,
-		Persona:      cfg.Persona,
-		OutputDir:    cfg.OutputDir,
-		Sequential:   false,
-		ResumeMode:   "normal",
-		Architecture: "config",
-		Timeout:      cfg.Timeout,
-		ConfigPath:   "",
-		Verbosity:    "normal",
-	}
+	opts := config.DefaultRunOptions(cfg)
+	opts.InputPath = dashOpts.PrefilledInput
 
-	// === ALL ON ONE PAGE ===
+	// Get all agent names for multi-select
 	agentNames := cfg.GetAgentNames()
-	result.Agents = agentNames // Default: all agents
+	opts.Agents = agentNames // Default: all agents
 
 	// Build input options
 	discoveredFiles := DiscoverInputFiles()
@@ -79,23 +54,29 @@ func RunDashboard(opts DashboardOptions) (*DashboardResult, error) {
 	inputOptions = append(inputOptions, huh.NewOption("🔍 Browse...", "__browse__"))
 
 	// If input was pre-filled, add it as first option if not already present
-	if result.InputPath != "" {
+	if opts.InputPath != "" {
 		found := false
 		for _, opt := range inputOptions {
-			if opt.Value == result.InputPath {
+			if opt.Value == opts.InputPath {
 				found = true
 				break
 			}
 		}
 		if !found {
-			inputOptions = append([]huh.Option[string]{huh.NewOption(result.InputPath, result.InputPath)}, inputOptions...)
+			inputOptions = append([]huh.Option[string]{huh.NewOption(opts.InputPath, opts.InputPath)}, inputOptions...)
 		}
 	}
 
-	// Track selections
-	var action string = "run"
-	var executionMode string = "parallel"
-	var timeoutStr string = strconv.Itoa(result.Timeout)
+	// Track selections using local variables
+	var action string
+	var executionMode = config.ExecutionParallel
+	var timeoutStr = strconv.Itoa(opts.Timeout)
+
+	// Build persona options from shared definitions
+	var personaOpts []huh.Option[string]
+	for _, o := range config.PersonaOptions {
+		personaOpts = append(personaOpts, huh.NewOption(o.Label+" - "+o.Description, o.Value))
+	}
 
 	// === Main loop ===
 	for {
@@ -115,25 +96,22 @@ func RunDashboard(opts DashboardOptions) (*DashboardResult, error) {
 				Description("Select PRD or input file").
 				Options(inputOptions...).
 				Height(8).
-				Value(&result.InputPath),
+				Value(&opts.InputPath),
 		)
 
+		// Persona using shared options
 		mainFields = append(mainFields,
 			huh.NewSelect[string]().
 				Title("Persona").
-				Options(
-					huh.NewOption("Minimal - MVP focus", "minimal"),
-					huh.NewOption("Balanced - Standard", "balanced"),
-					huh.NewOption("Production - Enterprise", "production"),
-				).
-				Value(&result.Persona),
+				Options(personaOpts...).
+				Value(&opts.Persona),
 		)
 
 		mainFields = append(mainFields,
 			huh.NewInput().
 				Title("Output").
 				Placeholder("./outputs").
-				Value(&result.OutputDir),
+				Value(&opts.OutputDir),
 		)
 
 		mainFields = append(mainFields,
@@ -154,14 +132,13 @@ func RunDashboard(opts DashboardOptions) (*DashboardResult, error) {
 
 		if err := mainForm.Run(); err != nil {
 			if errors.Is(err, huh.ErrUserAborted) {
-				result.Cancelled = true
-				return result, nil
+				return nil, nil // Cancelled
 			}
 			return nil, fmt.Errorf("form error: %w", err)
 		}
 
 		// Handle browse
-		if result.InputPath == "__browse__" {
+		if opts.InputPath == "__browse__" {
 			browseForm := huh.NewForm(
 				huh.NewGroup(
 					huh.NewFilePicker().
@@ -175,32 +152,31 @@ func RunDashboard(opts DashboardOptions) (*DashboardResult, error) {
 						ShowSize(true).
 						ShowPermissions(false).
 						Height(15).
-						Value(&result.InputPath),
+						Value(&opts.InputPath),
 				).Title("Pagent"),
 			).WithTheme(PagentTheme()).WithAccessible(accessible)
 
 			if err := browseForm.Run(); err != nil {
 				if errors.Is(err, huh.ErrUserAborted) {
-					result.InputPath = "" // Reset and go back to main
+					opts.InputPath = "" // Reset and go back to main
 					continue
 				}
 				return nil, err
 			}
 			// Add the browsed file to options and continue
-			if result.InputPath != "" {
-				inputOptions = append([]huh.Option[string]{huh.NewOption(result.InputPath, result.InputPath)}, inputOptions...)
+			if opts.InputPath != "" {
+				inputOptions = append([]huh.Option[string]{huh.NewOption(opts.InputPath, opts.InputPath)}, inputOptions...)
 			}
 			continue
 		}
 
 		// Validate input
-		if result.InputPath == "" {
+		if opts.InputPath == "" {
 			continue
 		}
 
 		if action == "cancel" {
-			result.Cancelled = true
-			return result, nil
+			return nil, nil // Cancelled
 		}
 
 		if action == "run" {
@@ -211,7 +187,7 @@ func RunDashboard(opts DashboardOptions) (*DashboardResult, error) {
 		var agentOptions []huh.Option[string]
 		for _, name := range agentNames {
 			selected := false
-			for _, a := range result.Agents {
+			for _, a := range opts.Agents {
 				if a == name {
 					selected = true
 					break
@@ -220,39 +196,49 @@ func RunDashboard(opts DashboardOptions) (*DashboardResult, error) {
 			agentOptions = append(agentOptions, huh.NewOption(name, name).Selected(selected))
 		}
 
+		// Build options from shared definitions
+		var execOpts []huh.Option[string]
+		for _, o := range config.ExecutionOptions {
+			execOpts = append(execOpts, huh.NewOption(o.Label, o.Value))
+		}
+
+		var resumeOpts []huh.Option[string]
+		for _, o := range config.ResumeModeOptions {
+			resumeOpts = append(resumeOpts, huh.NewOption(o.Label, o.Value))
+		}
+
+		var archOpts []huh.Option[string]
+		for _, o := range config.ArchitectureOptions {
+			archOpts = append(archOpts, huh.NewOption(o.Label, o.Value))
+		}
+
+		var verbOpts []huh.Option[string]
+		for _, o := range config.VerbosityOptions {
+			verbOpts = append(verbOpts, huh.NewOption(o.Label, o.Value))
+		}
+
 		advancedForm := huh.NewForm(
 			huh.NewGroup(
 				huh.NewMultiSelect[string]().
 					Title("Agents").
 					Description("Space=toggle").
 					Options(agentOptions...).
-					Value(&result.Agents),
+					Value(&opts.Agents),
 
 				huh.NewSelect[string]().
 					Title("Execution").
-					Options(
-						huh.NewOption("Parallel", "parallel"),
-						huh.NewOption("Sequential", "sequential"),
-					).
+					Options(execOpts...).
 					Value(&executionMode),
 
 				huh.NewSelect[string]().
 					Title("Resume").
-					Options(
-						huh.NewOption("Normal", "normal"),
-						huh.NewOption("Resume", "resume"),
-						huh.NewOption("Force", "force"),
-					).
-					Value(&result.ResumeMode),
+					Options(resumeOpts...).
+					Value(&opts.ResumeMode),
 
 				huh.NewSelect[string]().
 					Title("Architecture").
-					Options(
-						huh.NewOption("From config", "config"),
-						huh.NewOption("Stateless", "stateless"),
-						huh.NewOption("Database", "database"),
-					).
-					Value(&result.Architecture),
+					Options(archOpts...).
+					Value(&opts.Architecture),
 
 				huh.NewInput().
 					Title("Timeout (sec)").
@@ -262,16 +248,12 @@ func RunDashboard(opts DashboardOptions) (*DashboardResult, error) {
 				huh.NewInput().
 					Title("Config file").
 					Placeholder(".pagent/config.yaml").
-					Value(&result.ConfigPath),
+					Value(&opts.ConfigPath),
 
 				huh.NewSelect[string]().
 					Title("Verbosity").
-					Options(
-						huh.NewOption("Normal", "normal"),
-						huh.NewOption("Verbose", "verbose"),
-						huh.NewOption("Quiet", "quiet"),
-					).
-					Value(&result.Verbosity),
+					Options(verbOpts...).
+					Value(&opts.Verbosity),
 			).Title("Advanced").Description("Esc=back"),
 		).WithTheme(PagentTheme()).WithAccessible(accessible)
 
@@ -285,16 +267,13 @@ func RunDashboard(opts DashboardOptions) (*DashboardResult, error) {
 
 	// Parse timeout
 	if t, err := strconv.Atoi(timeoutStr); err == nil {
-		result.Timeout = t
+		opts.Timeout = t
 	}
 
 	// Map execution mode to boolean
-	result.Sequential = (executionMode == "sequential")
+	opts.Sequential = (executionMode == config.ExecutionSequential)
 
-	// Determine if all agents are selected
-	result.AllAgents = len(result.Agents) == len(agentNames)
-
-	return result, nil
+	return &opts, nil
 }
 
 // isTerminal checks if stdout is a terminal
