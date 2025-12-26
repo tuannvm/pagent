@@ -95,6 +95,18 @@ pagent run ./prd.md --agents architect,qa,security --sequential
 
 ## Usage
 
+### Interactive Dashboard
+
+```bash
+# Launch the interactive TUI dashboard
+pagent ui
+
+# Pre-fill with input file
+pagent ui ./prd.md
+```
+
+The dashboard provides a visual interface for configuring and running agents - no flags to memorize.
+
 ### Run Agents
 
 ```bash
@@ -345,12 +357,14 @@ pagent/
 │   │   ├── orchestrator.go  # Interface abstraction for testability
 │   │   └── agentapi_lib.go  # AgentAPI library client integration
 │   ├── api/                 # HTTP client for agent status polling
-│   ├── cmd/                 # CLI commands
-│   ├── config/              # Configuration loading
+│   ├── cmd/                 # CLI commands (run, ui, status, etc.)
+│   ├── config/              # Configuration loading and shared RunOptions
 │   ├── input/               # Input file discovery (single file or directory)
 │   ├── postprocess/         # Post-execution actions (diff summary, PR description)
 │   ├── prompt/              # Prompt template loading and rendering
+│   ├── runner/              # Shared execution logic for CLI and TUI
 │   ├── state/               # Resume state management (content hashing)
+│   ├── tui/                 # Interactive terminal UI (charmbracelet/huh)
 │   └── types/               # Shared type definitions (TechStack, Preferences)
 ├── .github/workflows/       # CI/CD pipelines
 ├── docs/                    # Documentation
@@ -367,10 +381,13 @@ pagent/
 - [Requirements](docs/03-requirements.md) - Full requirements specification
 - [Implementation](docs/04-implementation-plan.md) - Implementation details and architecture
 - [User Tutorial](docs/05-tutorial.md) - Step-by-step guide to using pagent
+- [Architecture Refactor](docs/06-architecture-refactor.md) - Code architecture and refactoring notes
+- [TUI Plan](docs/07-huh-ui-plan.md) - Interactive dashboard design
+- [TUI Implementation](docs/08-huh-ui-implementation.md) - TUI implementation guide
 
 ## Limitations (v1)
 
-- No web dashboard (CLI only)
+- No web dashboard (terminal TUI only)
 - No database persistence (state stored in JSON files)
 - No approval gates (agents run autonomously)
 - No mid-session resume (crash = restart from beginning)
