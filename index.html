@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagent - From idea to implementation, orchestrated</title>
+    <meta name="description" content="CLI that runs 5 AI agents (architect, qa, security, implementer, verifier) to turn your PRD into specs and working code. Supports Claude Code, Gemini CLI, Codex.">
+    <meta name="keywords" content="AI, CLI, code generation, PRD, agent orchestration, LLM">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #3EB489;
+            --accent-dark: #2D8A6A;
+            --bg-dark: #1a1b26;
+            --bg-card: #24283b;
+            --text-primary: #c0caf5;
+            --text-secondary: #a9b1d6;
+            --text-muted: #565f89;
+            --gradient-1: #f5a9b8;
+            --gradient-2: #c8b6ff;
+            --gradient-3: #a9def9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Gradient background */
+        .gradient-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg,
+                rgba(245, 169, 184, 0.1) 0%,
+                rgba(200, 182, 255, 0.1) 50%,
+                rgba(169, 222, 249, 0.1) 100%);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 16px 0;
+            background: rgba(26, 27, 38, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        nav .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .nav-cta {
+            background: var(--accent);
+            color: var(--bg-dark);
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        .nav-cta:hover {
+            background: var(--accent-dark);
+            color: var(--bg-dark);
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 120px 0 80px;
+            position: relative;
+        }
+
+        .hero-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .hero-text h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 24px;
+        }
+
+        .hero-text h1 span {
+            background: linear-gradient(135deg, var(--accent) 0%, #7dd3c0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-tagline {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            max-width: 500px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-dark);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Terminal Preview */
+        .terminal {
+            background: rgba(36, 40, 59, 0.9);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            gap: 8px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.red { background: #ff5f56; }
+        .terminal-dot.yellow { background: #ffbd2e; }
+        .terminal-dot.green { background: #27c93f; }
+
+        .terminal-title {
+            margin-left: auto;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .terminal-body {
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        .terminal-body pre {
+            white-space: pre-wrap;
+            color: var(--text-secondary);
+        }
+
+        .terminal-body .prompt {
+            color: var(--accent);
+        }
+
+        .terminal-body .command {
+            color: var(--text-primary);
+        }
+
+        .terminal-body .output {
+            color: var(--text-muted);
+        }
+
+        .terminal-body .success {
+            color: var(--accent);
+        }
+
+        /* ASCII Logo */
+        .ascii-logo {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.6rem;
+            line-height: 1;
+            letter-spacing: 0;
+            margin-bottom: 16px;
+            white-space: pre;
+        }
+
+        /* Problem Section */
+        .problem {
+            padding: 100px 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(62, 180, 137, 0.03) 100%);
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-label {
+            display: inline-block;
+            background: rgba(62, 180, 137, 0.1);
+            color: var(--accent);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 16px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .section-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .problem-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .problem-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(62, 180, 137, 0.3);
+        }
+
+        .problem-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(62, 180, 137, 0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .problem-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 12px;
+        }
+
+        .problem-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* How It Works */
+        .workflow {
+            padding: 100px 0;
+        }
+
+        .workflow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 60px;
+        }
+
+        .workflow-node {
+            background: var(--bg-card);
+            border: 2px solid rgba(62, 180, 137, 0.3);
+            border-radius: 10px;
+            padding: 16px 24px;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .workflow-node.input {
+            border-color: var(--gradient-2);
+        }
+
+        .workflow-node.output {
+            border-color: var(--accent);
+            background: rgba(62, 180, 137, 0.1);
+        }
+
+        .workflow-node .icon {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        .workflow-node .label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .workflow-node .sublabel {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .workflow-arrow {
+            color: var(--text-muted);
+            font-size: 1.5rem;
+        }
+
+        .workflow-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: rgba(62, 180, 137, 0.05);
+            border: 1px dashed rgba(62, 180, 137, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .workflow-group-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            text-align: center;
+        }
+
+        .workflow-group-nodes {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Agents Section */
+        .agents {
+            padding: 100px 0;
+            background: linear-gradient(180deg, rgba(62, 180, 137, 0.03) 0%, transparent 100%);
+        }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+        }
+
+        .agent-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .agent-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+        }
+
+        .agent-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, rgba(62, 180, 137, 0.2) 0%, rgba(62, 180, 137, 0.05) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 1.5rem;
+        }
+
+        .agent-card h3 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            margin-bottom: 8px;
+            color: var(--accent);
+        }
+
+        .agent-card .output {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: 12px;
+        }
+
+        .agent-card p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Features */
+        .features {
+            padding: 100px 0;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+        }
+
+        .feature-item {
+            display: flex;
+            gap: 20px;
+        }
+
+        .feature-icon {
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            background: rgba(62, 180, 137, 0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .feature-content h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .feature-content p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Install Section */
+        .install {
+            padding: 100px 0;
+            background: linear-gradient(180deg, transparent 0%, rgba(62, 180, 137, 0.05) 100%);
+        }
+
+        .install-content {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .install-step {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .install-step-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .step-number {
+            width: 28px;
+            height: 28px;
+            background: var(--accent);
+            color: var(--bg-dark);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .step-title {
+            font-weight: 600;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+        }
+
+        .code-block .comment {
+            color: var(--text-muted);
+        }
+
+        /* Personas */
+        .personas {
+            padding: 100px 0;
+        }
+
+        .personas-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .persona-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s;
+        }
+
+        .persona-card:hover {
+            border-color: var(--accent);
+        }
+
+        .persona-card.featured {
+            border-color: var(--accent);
+            background: linear-gradient(135deg, rgba(62, 180, 137, 0.1) 0%, rgba(62, 180, 137, 0.02) 100%);
+        }
+
+        .persona-badge {
+            display: inline-block;
+            background: rgba(62, 180, 137, 0.2);
+            color: var(--accent);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .persona-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        .persona-card .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        .persona-features {
+            list-style: none;
+        }
+
+        .persona-features li {
+            padding: 8px 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .persona-features li::before {
+            content: "~";
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Footer */
+        footer {
+            padding: 60px 0 40px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent);
+        }
+
+        .footer-copy {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
+            .hero-text {
+                text-align: center;
+            }
+
+            .hero-text h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero-tagline {
+                margin: 0 auto 32px;
+            }
+
+            .hero-buttons {
+                justify-content: center;
+            }
+
+            .problem-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .agents-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .personas-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero-text h1 {
+                font-size: 2rem;
+            }
+
+            .section-title {
+                font-size: 1.75rem;
+            }
+
+            .ascii-logo {
+                font-size: 0.35rem;
+            }
+
+            .workflow-diagram {
+                flex-direction: column;
+            }
+
+            .workflow-group-nodes {
+                flex-direction: column;
+            }
+
+            .agents-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                gap: 24px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="gradient-bg"></div>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="container">
+            <a href="#" class="nav-logo">pagent</a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#agents">Agents</a></li>
+                <li><a href="#personas">Personas</a></li>
+                <li><a href="#install">Install</a></li>
+                <li><a href="https://github.com/tuannvm/pagent/blob/main/docs/tutorial.md">Docs</a></li>
+            </ul>
+            <a href="https://github.com/tuannvm/pagent" class="nav-cta">GitHub</a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>From idea to <span>implementation</span>, orchestrated.</h1>
+                    <p class="hero-tagline">Give it a PRD, get back architecture.md, test-plan.md, security-assessment.md, and working code. Uses Claude Code (Gemini/Codex soon).</p>
+                    <div class="hero-buttons">
+                        <a href="#install" class="btn btn-primary">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Quick Start
+                        </a>
+                        <a href="https://github.com/tuannvm/pagent" class="btn btn-secondary">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                            View on GitHub
+                        </a>
+                    </div>
+                </div>
+                <div class="terminal">
+                    <div class="terminal-header">
+                        <span class="terminal-dot red"></span>
+                        <span class="terminal-dot yellow"></span>
+                        <span class="terminal-dot green"></span>
+                        <span class="terminal-title">pagent</span>
+                    </div>
+                    <div class="terminal-body">
+<pre class="ascii-logo">
+ ██████╗  █████╗  ██████╗ ███████╗███╗   ██╗████████╗
+ ██╔══██╗██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝
+ ██████╔╝███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║
+ ██╔═══╝ ██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║
+ ██║     ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║
+ ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝
+</pre>
+<pre>
+<span class="prompt">$</span> <span class="command">pagent run ./prd.md --sequential</span>
+
+<span class="output">[architect]</span> <span class="success">~</span> Analyzing requirements...
+<span class="output">[architect]</span> <span class="success">~</span> Writing architecture.md
+<span class="output">[qa]</span>        <span class="success">~</span> Creating test plan...
+<span class="output">[security]</span>  <span class="success">~</span> Threat modeling...
+<span class="output">[implementer]</span> <span class="success">~</span> Generating code...
+<span class="output">[verifier]</span> <span class="success">~</span> Running verification...
+
+<span class="success">Done!</span> Check outputs/
+</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Problem -->
+    <section class="problem">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">The Problem</span>
+                <h2 class="section-title">Single-agent code generation has limits</h2>
+                <p class="section-subtitle">When one agent handles everything - architecture, implementation, testing, security - quality suffers. Real teams don't work that way.</p>
+            </div>
+            <div class="problem-grid">
+                <div class="problem-card">
+                    <div class="problem-icon">?</div>
+                    <h3>No architecture phase</h3>
+                    <p>Code gets written before API contracts, data models, or error handling strategies are defined. Inconsistent patterns across the codebase.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">!</div>
+                    <h3>Shallow test coverage</h3>
+                    <p>Generated tests often cover happy paths only. Edge cases, error scenarios, and integration points get missed.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">#</div>
+                    <h3>Security gaps</h3>
+                    <p>Input validation, rate limiting, and authorization checks are easy to overlook without a dedicated security review pass.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="workflow">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">How It Works</span>
+                <h2 class="section-title">Structured handoffs between specialized agents</h2>
+                <p class="section-subtitle">Each agent has a focused role and reads previous outputs as context. The architect defines the system before the implementer writes code.</p>
+            </div>
+            <div class="workflow-diagram">
+                <div class="workflow-node input">
+                    <div class="icon">~</div>
+                    <div class="label">PRD.md</div>
+                    <div class="sublabel">Your requirements</div>
+                </div>
+                <div class="workflow-arrow">~</div>
+                <div class="workflow-group">
+                    <span class="workflow-group-label">Specification Phase</span>
+                    <div class="workflow-group-nodes">
+                        <div class="workflow-node">
+                            <div class="label">architect</div>
+                        </div>
+                        <div class="workflow-node">
+                            <div class="label">qa</div>
+                        </div>
+                        <div class="workflow-node">
+                            <div class="label">security</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="workflow-arrow">~</div>
+                <div class="workflow-group">
+                    <span class="workflow-group-label">Implementation Phase</span>
+                    <div class="workflow-group-nodes">
+                        <div class="workflow-node">
+                            <div class="label">implementer</div>
+                        </div>
+                        <div class="workflow-node">
+                            <div class="label">verifier</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="workflow-arrow">~</div>
+                <div class="workflow-node output">
+                    <div class="icon">~</div>
+                    <div class="label">outputs/</div>
+                    <div class="sublabel">Specs + Code</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Agents -->
+    <section class="agents" id="agents">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">The Agents</span>
+                <h2 class="section-title">Five specialized roles</h2>
+                <p class="section-subtitle">Each agent receives a focused prompt and produces a specific deliverable. Downstream agents read upstream outputs as context.</p>
+            </div>
+            <div class="agents-grid">
+                <div class="agent-card">
+                    <div class="agent-icon">~</div>
+                    <h3>architect</h3>
+                    <div class="output">architecture.md</div>
+                    <p>REST/GraphQL endpoints, DB schema, error handling patterns, deployment config</p>
+                </div>
+                <div class="agent-card">
+                    <div class="agent-icon">~</div>
+                    <h3>qa</h3>
+                    <div class="output">test-plan.md</div>
+                    <p>Test cases per endpoint, edge cases to cover, integration test scenarios</p>
+                </div>
+                <div class="agent-card">
+                    <div class="agent-icon">!</div>
+                    <h3>security</h3>
+                    <div class="output">security-assessment.md</div>
+                    <p>OWASP checks, auth flow review, input validation requirements, rate limit specs</p>
+                </div>
+                <div class="agent-card">
+                    <div class="agent-icon">#</div>
+                    <h3>implementer</h3>
+                    <div class="output">code/*</div>
+                    <p>Reads all specs, writes handlers, services, repos, middleware, Dockerfile</p>
+                </div>
+                <div class="agent-card">
+                    <div class="agent-icon">~</div>
+                    <h3>verifier</h3>
+                    <div class="output">*_test.go</div>
+                    <p>Writes tests from test-plan.md, checks security requirements, validates build</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Features</span>
+                <h2 class="section-title">Practical workflow automation</h2>
+            </div>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">~</div>
+                    <div class="feature-content">
+                        <h3>Multi-LLM support</h3>
+                        <p>Currently supports Claude Code, with Gemini CLI and Codex CLI coming soon. Uses your existing authentication - no additional API keys required.</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">||</div>
+                    <div class="feature-content">
+                        <h3>Parallel execution</h3>
+                        <p>QA and security agents run concurrently after architecture completes. Dependency-aware scheduling minimizes total runtime.</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">~</div>
+                    <div class="feature-content">
+                        <h3>Incremental regeneration</h3>
+                        <p>Content-hash based change detection. Only affected outputs get regenerated when inputs change.</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">~</div>
+                    <div class="feature-content">
+                        <h3>Interactive TUI</h3>
+                        <p>Run `pagent ui` for a visual interface. Configure personas, select agents, and monitor progress without CLI flags.</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">~</div>
+                    <div class="feature-content">
+                        <h3>Modify existing codebases</h3>
+                        <p>Point pagent at an existing project and it will respect your patterns, conventions, and directory structure.</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">~</div>
+                    <div class="feature-content">
+                        <h3>Configurable tech stack</h3>
+                        <p>Define your preferences once in .pagent/config.yaml. Language, API style, cloud provider, database, CI/CD tooling.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Personas -->
+    <section class="personas" id="personas">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Personas</span>
+                <h2 class="section-title">Match rigor to your project needs</h2>
+                <p class="section-subtitle">Different projects need different levels of thoroughness. Choose the right trade-off between speed and completeness.</p>
+            </div>
+            <div class="personas-grid">
+                <div class="persona-card">
+                    <span class="persona-badge">--persona minimal</span>
+                    <h3>Minimal</h3>
+                    <p class="subtitle">POC / hackathon</p>
+                    <ul class="persona-features">
+                        <li>Happy path handlers only</li>
+                        <li>Basic input validation</li>
+                        <li>One test per endpoint</li>
+                        <li>No observability</li>
+                    </ul>
+                </div>
+                <div class="persona-card featured">
+                    <span class="persona-badge">--persona balanced</span>
+                    <h3>Balanced</h3>
+                    <p class="subtitle">Default - most projects</p>
+                    <ul class="persona-features">
+                        <li>Error handling + recovery</li>
+                        <li>70% test coverage target</li>
+                        <li>Auth + authz middleware</li>
+                        <li>Structured logging</li>
+                    </ul>
+                </div>
+                <div class="persona-card">
+                    <span class="persona-badge">--persona production</span>
+                    <h3>Production</h3>
+                    <p class="subtitle">Enterprise / regulated</p>
+                    <ul class="persona-features">
+                        <li>STRIDE threat modeling</li>
+                        <li>95% coverage on critical paths</li>
+                        <li>Audit logs, rate limiting</li>
+                        <li>OpenTelemetry traces</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Install -->
+    <section class="install" id="install">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Get Started</span>
+                <h2 class="section-title">Try it out</h2>
+            </div>
+            <div class="install-content">
+                <div class="install-step">
+                    <div class="install-step-header">
+                        <span class="step-number">1</span>
+                        <span class="step-title">Install pagent</span>
+                    </div>
+                    <div class="code-block">
+                        <span class="comment"># From source</span><br>
+                        git clone https://github.com/tuannvm/pagent && cd pagent && make install<br><br>
+                        <span class="comment"># Or download from releases</span><br>
+                        <span class="comment"># https://github.com/tuannvm/pagent/releases</span>
+                    </div>
+                </div>
+                <div class="install-step">
+                    <div class="install-step-header">
+                        <span class="step-number">2</span>
+                        <span class="step-title">Run on your PRD</span>
+                    </div>
+                    <div class="code-block">
+                        <span class="comment"># Run all agents</span><br>
+                        pagent run ./prd.md --sequential -v<br><br>
+                        <span class="comment"># Or use the interactive TUI</span><br>
+                        pagent ui ./prd.md
+                    </div>
+                </div>
+                <div class="install-step">
+                    <div class="install-step-header">
+                        <span class="step-number">3</span>
+                        <span class="step-title">Check your outputs</span>
+                    </div>
+                    <div class="code-block">
+                        ls outputs/<br>
+                        <span class="comment"># architecture.md  test-plan.md  security-assessment.md  code/</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <span class="footer-logo">pagent</span>
+                <ul class="footer-links">
+                    <li><a href="https://github.com/tuannvm/pagent">GitHub</a></li>
+                    <li><a href="https://github.com/tuannvm/pagent/blob/main/docs/tutorial.md">Documentation</a></li>
+                    <li><a href="https://github.com/tuannvm/pagent/blob/main/docs/roadmap.md">Roadmap</a></li>
+                    <li><a href="https://github.com/tuannvm/pagent/issues">Issues</a></li>
+                </ul>
+            </div>
+            <p class="footer-copy">MIT License</p>
+        </div>
+    </footer>
+</body>
+</html>
