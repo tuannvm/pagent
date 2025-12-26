@@ -792,7 +792,7 @@
             <div class="hero-content">
                 <div class="hero-text">
                     <h1>From idea to <span>implementation</span>, orchestrated.</h1>
-                    <p class="hero-tagline">Give it a PRD, get back architecture.md, test-plan.md, security-assessment.md, and working code. Uses Claude Code (Gemini/Codex soon).</p>
+                    <p class="hero-tagline">Interactive TUI to orchestrate AI agents. Give it a PRD, get back architecture, test plan, security assessment, and working code.</p>
                     <div class="hero-buttons">
                         <a href="#install" class="btn btn-primary">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -821,16 +821,25 @@
  ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝
 </pre>
 <pre>
-<span class="prompt">$</span> <span class="command">pagent run ./prd.md --sequential</span>
+ <span class="output">From idea to implementation, orchestrated.</span>
 
-<span class="output">[architect]</span> <span class="success">~</span> Analyzing requirements...
-<span class="output">[architect]</span> <span class="success">~</span> Writing architecture.md
-<span class="output">[qa]</span>        <span class="success">~</span> Creating test plan...
-<span class="output">[security]</span>  <span class="success">~</span> Threat modeling...
-<span class="output">[implementer]</span> <span class="success">~</span> Generating code...
-<span class="output">[verifier]</span> <span class="success">~</span> Running verification...
+ <span class="success">Input</span>
+ <span class="output">Select PRD or input file</span>
+ <span class="success">&gt;</span> 📁 examples/
+   README.md
+   examples/sample-prd.md
 
-<span class="success">Done!</span> Check outputs/
+ <span class="success">Persona</span>
+   Minimal - MVP focus
+ <span class="success">&gt;</span> Balanced - Standard
+   Production - Enterprise
+
+ <span class="success">Action</span>
+ <span class="success">&gt;</span> ▶ Run
+   ⚙ Advanced...
+   × Cancel
+
+ <span class="output">↑ up · ↓ down · / filter · enter select</span>
 </pre>
                     </div>
                 </div>
@@ -990,10 +999,10 @@
                     </div>
                 </div>
                 <div class="feature-item">
-                    <div class="feature-icon">~</div>
+                    <div class="feature-icon">▶</div>
                     <div class="feature-content">
                         <h3>Interactive TUI</h3>
-                        <p>Run `pagent ui` for a visual interface. Configure personas, select agents, and monitor progress without CLI flags.</p>
+                        <p>The primary interface. Auto-discovers PRD files, lets you pick personas and agents visually, with keyboard navigation and file browser.</p>
                     </div>
                 </div>
                 <div class="feature-item">
@@ -1083,13 +1092,13 @@
                 <div class="install-step">
                     <div class="install-step-header">
                         <span class="step-number">2</span>
-                        <span class="step-title">Run on your PRD</span>
+                        <span class="step-title">Launch the TUI</span>
                     </div>
                     <div class="code-block">
-                        <span class="comment"># Run all agents</span><br>
-                        pagent run ./prd.md --sequential -v<br><br>
-                        <span class="comment"># Or use the interactive TUI</span><br>
-                        pagent ui ./prd.md
+                        <span class="comment"># Interactive TUI (recommended)</span><br>
+                        pagent ui<br><br>
+                        <span class="comment"># Or use the CLI directly</span><br>
+                        pagent run ./prd.md --sequential -v
                     </div>
                 </div>
                 <div class="install-step">
