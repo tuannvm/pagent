@@ -97,16 +97,15 @@ Run `pagent init` to create `.pagent/config.yaml`. Key options:
 - **preferences**: API style, testing depth, language
 - **stack**: Cloud, database, CI/CD choices
 
-See [Tutorial](docs/05-tutorial.md#configuration) for full config reference.
+See [docs/tutorial.md](docs/tutorial.md#configuration) for full config reference.
 
 ## Documentation
 
 | Doc | Content |
 |-----|---------|
-| [Tutorial](docs/05-tutorial.md) | Step-by-step usage guide |
-| [Implementation](docs/04-implementation-plan.md) | Architecture and internals |
-| [Architecture Refactor](docs/06-architecture-refactor.md) | Code structure notes |
-| [TUI Guide](docs/08-huh-ui-implementation.md) | Interactive UI details |
+| [Tutorial](docs/tutorial.md) | Step-by-step usage guide |
+| [Architecture](docs/architecture.md) | Technical design and internals |
+| [Roadmap](docs/roadmap.md) | Future plans |
 
 ## Troubleshooting
 
@@ -114,11 +113,25 @@ See [Tutorial](docs/05-tutorial.md#configuration) for full config reference.
 
 **"port already in use"** - Run `pagent stop --all`
 
-See [Tutorial - Troubleshooting](docs/05-tutorial.md#troubleshooting) for more.
+See [docs/tutorial.md#troubleshooting](docs/tutorial.md#troubleshooting) for more.
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Roadmap
+
+Currently supports **Claude Code** only. Coming next:
+
+- **Multi-LLM support** - Gemini, Codex, AMP
+- **Simplified config** - Fewer options, smarter defaults
+- **Better UX** - Guided setup, clearer outputs
+
+See [full roadmap](docs/roadmap.md).
+
+## Acknowledgments
+
+This project is built on [AgentAPI](https://github.com/coder/agentapi) by [Coder](https://github.com/coder) - a brilliant HTTP wrapper for Claude Code that makes agent orchestration possible. Pagent wouldn't exist without it.
 
 ## License
 
