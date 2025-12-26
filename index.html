@@ -1083,9 +1083,10 @@
                         <span class="step-title">Install pagent</span>
                     </div>
                     <div class="code-block">
+                        <span class="comment"># Prerequisites: Go 1.20+ and $GOPATH/bin in your PATH</span><br><br>
                         <span class="comment"># From source</span><br>
                         git clone https://github.com/tuannvm/pagent && cd pagent && make install<br><br>
-                        <span class="comment"># Or download from releases</span><br>
+                        <span class="comment"># Or download pre-built binaries from releases</span><br>
                         <span class="comment"># https://github.com/tuannvm/pagent/releases</span>
                     </div>
                 </div>
@@ -1108,7 +1109,8 @@
                     </div>
                     <div class="code-block">
                         ls outputs/<br>
-                        <span class="comment"># architecture.md  test-plan.md  security-assessment.md  code/</span>
+                        <span class="comment"># architecture.md  test-plan.md  security-assessment.md</span><br>
+                        <span class="comment"># code/ directory generated when implementer agent runs</span>
                     </div>
                 </div>
             </div>
