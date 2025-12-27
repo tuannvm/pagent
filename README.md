@@ -30,14 +30,7 @@ flowchart LR
 ## Quick Start
 
 ```bash
-# macOS (Homebrew)
 brew install tuannvm/mcp/pagent
-
-# Or download binary directly
-curl -sSL https://github.com/tuannvm/pagent/releases/latest/download/pagent_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz | tar xz
-sudo mv pagent /usr/local/bin/
-
-# Launch the interactive TUI
 pagent ui
 ```
 
@@ -74,23 +67,18 @@ pagent run ./prd.md --sequential -v
 
 ## Installation
 
-**Homebrew (macOS/Linux):**
+**Homebrew (recommended):**
 ```bash
 brew install tuannvm/mcp/pagent
 ```
 
+<details>
+<summary>Alternative installation methods</summary>
+
 **Binary download:**
 ```bash
-# macOS (Apple Silicon)
-curl -sSL https://github.com/tuannvm/pagent/releases/latest/download/pagent_darwin_arm64.tar.gz | tar xz
-sudo mv pagent /usr/local/bin/
-
-# macOS (Intel)
-curl -sSL https://github.com/tuannvm/pagent/releases/latest/download/pagent_darwin_amd64.tar.gz | tar xz
-sudo mv pagent /usr/local/bin/
-
-# Linux (x86_64)
-curl -sSL https://github.com/tuannvm/pagent/releases/latest/download/pagent_linux_amd64.tar.gz | tar xz
+# Detect OS and architecture automatically
+curl -sSL https://github.com/tuannvm/pagent/releases/latest/download/pagent_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz | tar xz
 sudo mv pagent /usr/local/bin/
 ```
 
@@ -98,6 +86,8 @@ sudo mv pagent /usr/local/bin/
 ```bash
 git clone https://github.com/tuannvm/pagent && cd pagent && make install
 ```
+
+</details>
 
 ## Commands
 

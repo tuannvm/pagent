@@ -1083,14 +1083,11 @@
                         <span class="step-title">Install pagent</span>
                     </div>
                     <div class="code-block">
-                        <span class="comment"># Homebrew (macOS/Linux)</span><br>
-                        brew install tuannvm/mcp/pagent<br><br>
-                        <span class="comment"># Or download binary directly</span><br>
-                        curl -sSL https://github.com/tuannvm/pagent/releases/latest/download/pagent_darwin_arm64.tar.gz | tar xz<br>
-                        sudo mv pagent /usr/local/bin/<br><br>
-                        <span class="comment"># Or build from source (requires Go 1.21+)</span><br>
-                        git clone https://github.com/tuannvm/pagent && cd pagent && make install
+                        brew install tuannvm/mcp/pagent
                     </div>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 12px;">
+                        Alternative: <a href="https://github.com/tuannvm/pagent/releases" style="color: var(--accent);">download binary</a> or build from source
+                    </p>
                 </div>
                 <div class="install-step">
                     <div class="install-step-header">
@@ -1098,11 +1095,11 @@
                         <span class="step-title">Launch the TUI</span>
                     </div>
                     <div class="code-block">
-                        <span class="comment"># Interactive TUI (recommended)</span><br>
-                        pagent ui<br><br>
-                        <span class="comment"># Or use the CLI directly</span><br>
-                        pagent run ./prd.md --sequential -v
+                        pagent ui
                     </div>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 12px;">
+                        Or use CLI: <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">pagent run ./prd.md -s -v</code>
+                    </p>
                 </div>
                 <div class="install-step">
                     <div class="install-step-header">
