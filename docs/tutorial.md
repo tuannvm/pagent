@@ -5,10 +5,15 @@
 1. **Claude Code** installed and authenticated (`claude --version`)
 2. **pagent** CLI:
    ```bash
-   # From source
-   git clone https://github.com/tuannvm/pagent && cd pagent && make install
+   # Homebrew (recommended)
+   brew install tuannvm/mcp/pagent
 
-   # Or download release binary
+   # Or download binary
+   curl -sSL https://github.com/tuannvm/pagent/releases/latest/download/pagent_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz | tar xz
+   sudo mv pagent /usr/local/bin/
+
+   # Or from source (requires Go 1.21+)
+   git clone https://github.com/tuannvm/pagent && cd pagent && make install
    ```
 
 ## Quick Start
