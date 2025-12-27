@@ -10,17 +10,38 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Dark theme (default) - matching tuannvm.com */
         :root {
-            --accent: #3EB489;
-            --accent-dark: #2D8A6A;
-            --bg-dark: #1a1b26;
-            --bg-card: #24283b;
-            --text-primary: #c0caf5;
-            --text-secondary: #a9b1d6;
-            --text-muted: #565f89;
-            --gradient-1: #f5a9b8;
-            --gradient-2: #c8b6ff;
-            --gradient-3: #a9def9;
+            --accent: #44D62C;
+            --accent-dark: #2A8C1A;
+            --bg-primary: #111111;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #1a1a1a;
+            --text-primary: #FFFFFF;
+            --text-secondary: #CCCCCC;
+            --text-muted: #999999;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --nav-bg: rgba(17, 17, 17, 0.9);
+            --code-bg: #282c34;
+            --highlight-bg: rgba(68, 214, 44, 0.1);
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Light theme - optimized for readability */
+        [data-theme="light"] {
+            --accent: #1A7F10;
+            --accent-dark: #145F0C;
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F5F5F5;
+            --bg-card: #FFFFFF;
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --text-muted: #6a6a6a;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --nav-bg: rgba(255, 255, 255, 0.95);
+            --code-bg: #f0f0f0;
+            --highlight-bg: rgba(26, 127, 16, 0.08);
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         * {
@@ -35,10 +56,11 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-dark);
+            background: var(--bg-primary);
             color: var(--text-primary);
             line-height: 1.6;
             overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .mono {
@@ -53,10 +75,22 @@
             width: 100%;
             height: 100%;
             z-index: -1;
-            background: linear-gradient(135deg,
-                rgba(245, 169, 184, 0.1) 0%,
-                rgba(200, 182, 255, 0.1) 50%,
-                rgba(169, 222, 249, 0.1) 100%);
+            background: radial-gradient(ellipse at top right,
+                rgba(68, 214, 44, 0.08) 0%,
+                transparent 50%),
+                radial-gradient(ellipse at bottom left,
+                rgba(42, 140, 26, 0.05) 0%,
+                transparent 50%);
+            transition: background 0.3s ease;
+        }
+
+        [data-theme="light"] .gradient-bg {
+            background: radial-gradient(ellipse at top right,
+                rgba(26, 127, 16, 0.06) 0%,
+                transparent 50%),
+                radial-gradient(ellipse at bottom left,
+                rgba(20, 95, 12, 0.04) 0%,
+                transparent 50%);
         }
 
         .container {
@@ -73,9 +107,10 @@
             right: 0;
             z-index: 100;
             padding: 16px 0;
-            background: rgba(26, 27, 38, 0.8);
+            background: var(--nav-bg);
             backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         nav .container {
@@ -111,7 +146,7 @@
 
         .nav-cta {
             background: var(--accent);
-            color: var(--bg-dark);
+            color: #fff;
             padding: 8px 20px;
             border-radius: 6px;
             font-weight: 600;
@@ -122,7 +157,67 @@
 
         .nav-cta:hover {
             background: var(--accent-dark);
-            color: var(--bg-dark);
+            color: #fff;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s, background-color 0.2s;
+        }
+
+        .theme-toggle:hover {
+            color: var(--accent);
+            background: var(--bg-secondary);
+        }
+
+        .theme-toggle svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .theme-toggle .sun-icon {
+            display: none;
+        }
+
+        .theme-toggle .moon-icon {
+            display: block;
+        }
+
+        [data-theme="light"] .theme-toggle .sun-icon {
+            display: block;
+        }
+
+        [data-theme="light"] .theme-toggle .moon-icon {
+            display: none;
+        }
+
+        /* Light mode card shadows */
+        [data-theme="light"] .agent-card,
+        [data-theme="light"] .persona-card,
+        [data-theme="light"] .install-step,
+        [data-theme="light"] .feature-item {
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme="light"] .agent-card:hover,
+        [data-theme="light"] .persona-card:hover,
+        [data-theme="light"] .problem-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         /* Hero Section */
@@ -149,7 +244,7 @@
         }
 
         .hero-text h1 span {
-            background: linear-gradient(135deg, var(--accent) 0%, #7dd3c0 100%);
+            background: linear-gradient(135deg, var(--accent) 0%, #7FE86B 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -182,7 +277,7 @@
 
         .btn-primary {
             background: var(--accent);
-            color: var(--bg-dark);
+            color: #fff;
         }
 
         .btn-primary:hover {
@@ -203,18 +298,24 @@
 
         /* Terminal Preview */
         .terminal {
-            background: rgba(36, 40, 59, 0.9);
+            background: #282c34;
             border-radius: 12px;
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(68, 214, 44, 0.3);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        [data-theme="light"] .terminal {
+            border: 1px solid rgba(26, 127, 16, 0.4);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
         }
 
         .terminal-header {
             display: flex;
             align-items: center;
             padding: 12px 16px;
-            background: rgba(0, 0, 0, 0.3);
+            background: var(--code-bg);
             gap: 8px;
         }
 
@@ -226,7 +327,7 @@
 
         .terminal-dot.red { background: #ff5f56; }
         .terminal-dot.yellow { background: #ffbd2e; }
-        .terminal-dot.green { background: #27c93f; }
+        .terminal-dot.green { background: #44D62C; }
 
         .terminal-title {
             margin-left: auto;
@@ -244,23 +345,23 @@
 
         .terminal-body pre {
             white-space: pre-wrap;
-            color: var(--text-secondary);
+            color: #abb2bf;
         }
 
         .terminal-body .prompt {
-            color: var(--accent);
+            color: #98c379;
         }
 
         .terminal-body .command {
-            color: var(--text-primary);
+            color: #e5c07b;
         }
 
         .terminal-body .output {
-            color: var(--text-muted);
+            color: #7f848e;
         }
 
         .terminal-body .success {
-            color: var(--accent);
+            color: #44D62C;
         }
 
         /* ASCII Logo */
@@ -277,7 +378,7 @@
         /* Problem Section */
         .problem {
             padding: 100px 0;
-            background: linear-gradient(180deg, transparent 0%, rgba(62, 180, 137, 0.03) 100%);
+            background: linear-gradient(180deg, transparent 0%, rgba(68, 214, 44, 0.03) 100%);
         }
 
         .section-header {
@@ -287,7 +388,7 @@
 
         .section-label {
             display: inline-block;
-            background: rgba(62, 180, 137, 0.1);
+            background: rgba(68, 214, 44, 0.1);
             color: var(--accent);
             padding: 6px 16px;
             border-radius: 20px;
@@ -320,19 +421,23 @@
             background: var(--bg-card);
             border-radius: 12px;
             padding: 32px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: transform 0.2s, border-color 0.2s;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+        }
+
+        [data-theme="light"] .problem-card {
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
 
         .problem-card:hover {
             transform: translateY(-4px);
-            border-color: rgba(62, 180, 137, 0.3);
+            border-color: rgba(68, 214, 44, 0.3);
         }
 
         .problem-icon {
             width: 48px;
             height: 48px;
-            background: rgba(62, 180, 137, 0.1);
+            background: rgba(68, 214, 44, 0.1);
             border-radius: 10px;
             display: flex;
             align-items: center;
@@ -367,7 +472,7 @@
 
         .workflow-node {
             background: var(--bg-card);
-            border: 2px solid rgba(62, 180, 137, 0.3);
+            border: 2px solid rgba(68, 214, 44, 0.3);
             border-radius: 10px;
             padding: 16px 24px;
             text-align: center;
@@ -380,7 +485,7 @@
 
         .workflow-node.output {
             border-color: var(--accent);
-            background: rgba(62, 180, 137, 0.1);
+            background: rgba(68, 214, 44, 0.1);
         }
 
         .workflow-node .icon {
@@ -409,8 +514,8 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            background: rgba(62, 180, 137, 0.05);
-            border: 1px dashed rgba(62, 180, 137, 0.3);
+            background: rgba(68, 214, 44, 0.05);
+            border: 1px dashed rgba(68, 214, 44, 0.3);
             border-radius: 12px;
             padding: 16px;
         }
@@ -431,7 +536,7 @@
         /* Agents Section */
         .agents {
             padding: 100px 0;
-            background: linear-gradient(180deg, rgba(62, 180, 137, 0.03) 0%, transparent 100%);
+            background: linear-gradient(180deg, rgba(68, 214, 44, 0.03) 0%, transparent 100%);
         }
 
         .agents-grid {
@@ -444,7 +549,7 @@
             background: var(--bg-card);
             border-radius: 12px;
             padding: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
             text-align: center;
             transition: all 0.3s;
         }
@@ -457,7 +562,7 @@
         .agent-icon {
             width: 56px;
             height: 56px;
-            background: linear-gradient(135deg, rgba(62, 180, 137, 0.2) 0%, rgba(62, 180, 137, 0.05) 100%);
+            background: linear-gradient(135deg, rgba(68, 214, 44, 0.2) 0%, rgba(68, 214, 44, 0.05) 100%);
             border-radius: 12px;
             display: flex;
             align-items: center;
@@ -505,7 +610,7 @@
             flex-shrink: 0;
             width: 48px;
             height: 48px;
-            background: rgba(62, 180, 137, 0.1);
+            background: rgba(68, 214, 44, 0.1);
             border-radius: 10px;
             display: flex;
             align-items: center;
@@ -526,7 +631,7 @@
         /* Install Section */
         .install {
             padding: 100px 0;
-            background: linear-gradient(180deg, transparent 0%, rgba(62, 180, 137, 0.05) 100%);
+            background: linear-gradient(180deg, transparent 0%, rgba(68, 214, 44, 0.05) 100%);
         }
 
         .install-content {
@@ -539,7 +644,7 @@
             border-radius: 12px;
             padding: 24px;
             margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
         }
 
         .install-step-header {
@@ -553,7 +658,7 @@
             width: 28px;
             height: 28px;
             background: var(--accent);
-            color: var(--bg-dark);
+            color: #fff;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -566,13 +671,55 @@
             font-weight: 600;
         }
 
+        .code-block-wrapper {
+            position: relative;
+        }
+
         .code-block {
-            background: rgba(0, 0, 0, 0.3);
+            background: var(--code-bg);
             border-radius: 8px;
             padding: 16px;
+            padding-right: 48px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.85rem;
             overflow-x: auto;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            opacity: 0;
+        }
+
+        .code-block-wrapper:hover .copy-btn {
+            opacity: 1;
+        }
+
+        .copy-btn:hover {
+            background: var(--highlight-bg);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .copy-btn.copied {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .copy-btn svg {
+            width: 16px;
+            height: 16px;
         }
 
         .code-block .comment {
@@ -594,7 +741,7 @@
             background: var(--bg-card);
             border-radius: 12px;
             padding: 32px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
             transition: all 0.3s;
         }
 
@@ -604,18 +751,28 @@
 
         .persona-card.featured {
             border-color: var(--accent);
-            background: linear-gradient(135deg, rgba(62, 180, 137, 0.1) 0%, rgba(62, 180, 137, 0.02) 100%);
+            background: linear-gradient(135deg, rgba(68, 214, 44, 0.15) 0%, rgba(68, 214, 44, 0.02) 100%);
+            box-shadow: 0 0 20px rgba(68, 214, 44, 0.1);
+        }
+
+        [data-theme="light"] .persona-card.featured {
+            background: linear-gradient(135deg, rgba(26, 127, 16, 0.1) 0%, rgba(26, 127, 16, 0.02) 100%);
+            box-shadow: 0 4px 12px rgba(26, 127, 16, 0.15);
         }
 
         .persona-badge {
             display: inline-block;
-            background: rgba(62, 180, 137, 0.2);
+            background: rgba(68, 214, 44, 0.2);
             color: var(--accent);
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.75rem;
             font-weight: 600;
             margin-bottom: 16px;
+        }
+
+        [data-theme="light"] .persona-badge {
+            background: rgba(26, 127, 16, 0.15);
         }
 
         .persona-card h3 {
@@ -651,7 +808,7 @@
         /* Footer */
         footer {
             padding: 60px 0 40px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            border-top: 1px solid var(--border-color);
         }
 
         .footer-content {
@@ -782,7 +939,17 @@
                 <li><a href="#install">Install</a></li>
                 <li><a href="https://github.com/tuannvm/pagent/blob/main/docs/tutorial.md">Docs</a></li>
             </ul>
-            <a href="https://github.com/tuannvm/pagent" class="nav-cta">GitHub</a>
+            <div class="nav-right">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+                <a href="https://github.com/tuannvm/pagent" class="nav-cta">GitHub</a>
+            </div>
         </div>
     </nav>
 
@@ -1082,8 +1249,18 @@
                         <span class="step-number">1</span>
                         <span class="step-title">Install pagent</span>
                     </div>
-                    <div class="code-block">
-                        brew install tuannvm/mcp/pagent
+                    <div class="code-block-wrapper">
+                        <div class="code-block" data-copy="brew install tuannvm/mcp/pagent">
+                            brew install tuannvm/mcp/pagent
+                        </div>
+                        <button class="copy-btn" aria-label="Copy to clipboard">
+                            <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <svg class="check-icon" style="display:none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </button>
                     </div>
                     <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 12px;">
                         Alternative: <a href="https://github.com/tuannvm/pagent/releases" style="color: var(--accent);">download binary</a> or build from source
@@ -1094,11 +1271,21 @@
                         <span class="step-number">2</span>
                         <span class="step-title">Launch the TUI</span>
                     </div>
-                    <div class="code-block">
-                        pagent ui
+                    <div class="code-block-wrapper">
+                        <div class="code-block" data-copy="pagent ui">
+                            pagent ui
+                        </div>
+                        <button class="copy-btn" aria-label="Copy to clipboard">
+                            <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <svg class="check-icon" style="display:none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </button>
                     </div>
                     <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 12px;">
-                        Or use CLI: <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">pagent run ./prd.md -s -v</code>
+                        Or use CLI: <code style="background: var(--code-bg); padding: 2px 6px; border-radius: 4px;">pagent run ./prd.md -s -v</code>
                     </p>
                 </div>
                 <div class="install-step">
@@ -1106,10 +1293,20 @@
                         <span class="step-number">3</span>
                         <span class="step-title">Check your outputs</span>
                     </div>
-                    <div class="code-block">
-                        ls outputs/<br>
-                        <span class="comment"># architecture.md  test-plan.md  security-assessment.md</span><br>
-                        <span class="comment"># code/ directory generated when implementer agent runs</span>
+                    <div class="code-block-wrapper">
+                        <div class="code-block" data-copy="ls outputs/">
+                            ls outputs/<br>
+                            <span class="comment"># architecture.md  test-plan.md  security-assessment.md</span><br>
+                            <span class="comment"># code/ directory generated when implementer agent runs</span>
+                        </div>
+                        <button class="copy-btn" aria-label="Copy to clipboard">
+                            <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <svg class="check-icon" style="display:none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1131,5 +1328,92 @@
             <p class="footer-copy">MIT License</p>
         </div>
     </footer>
+
+    <script>
+        // Theme toggle functionality
+        (function() {
+            const toggle = document.getElementById('theme-toggle');
+            const html = document.documentElement;
+
+            // Check for saved preference or system preference
+            function getPreferredTheme() {
+                const saved = localStorage.getItem('theme');
+                if (saved) return saved;
+                return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            }
+
+            // Apply theme
+            function setTheme(theme) {
+                if (theme === 'light') {
+                    html.setAttribute('data-theme', 'light');
+                } else {
+                    html.removeAttribute('data-theme');
+                }
+                localStorage.setItem('theme', theme);
+            }
+
+            // Initialize theme
+            setTheme(getPreferredTheme());
+
+            // Toggle handler
+            toggle.addEventListener('click', () => {
+                const current = html.getAttribute('data-theme');
+                setTheme(current === 'light' ? 'dark' : 'light');
+            });
+
+            // Listen for system preference changes
+            window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+                if (!localStorage.getItem('theme')) {
+                    setTheme(e.matches ? 'light' : 'dark');
+                }
+            });
+        })();
+
+        // Copy button functionality
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const wrapper = btn.closest('.code-block-wrapper');
+                const codeBlock = wrapper.querySelector('.code-block');
+                const textToCopy = codeBlock.dataset.copy || codeBlock.textContent.trim();
+
+                // Copy to clipboard with fallback
+                let success = false;
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(textToCopy);
+                        success = true;
+                    } else {
+                        // Fallback for older browsers
+                        const textarea = document.createElement('textarea');
+                        textarea.value = textToCopy;
+                        textarea.style.position = 'fixed';
+                        textarea.style.opacity = '0';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        success = document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                    }
+                } catch (err) {
+                    console.error('Failed to copy:', err);
+                }
+
+                if (success) {
+                    // Show check icon
+                    const copyIcon = btn.querySelector('.copy-icon');
+                    const checkIcon = btn.querySelector('.check-icon');
+                    copyIcon.style.display = 'none';
+                    checkIcon.style.display = 'block';
+                    btn.classList.add('copied');
+
+                    // Reset after 2 seconds
+                    setTimeout(() => {
+                        copyIcon.style.display = 'block';
+                        checkIcon.style.display = 'none';
+                        btn.classList.remove('copied');
+                    }, 2000);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
