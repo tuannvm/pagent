@@ -1083,11 +1083,13 @@
                         <span class="step-title">Install pagent</span>
                     </div>
                     <div class="code-block">
-                        <span class="comment"># Prerequisites: Go 1.20+ and $GOPATH/bin in your PATH</span><br><br>
-                        <span class="comment"># From source</span><br>
-                        git clone https://github.com/tuannvm/pagent && cd pagent && make install<br><br>
-                        <span class="comment"># Or download pre-built binaries from releases</span><br>
-                        <span class="comment"># https://github.com/tuannvm/pagent/releases</span>
+                        <span class="comment"># Homebrew (macOS/Linux)</span><br>
+                        brew install tuannvm/mcp/pagent<br><br>
+                        <span class="comment"># Or download binary directly</span><br>
+                        curl -sSL https://github.com/tuannvm/pagent/releases/latest/download/pagent_darwin_arm64.tar.gz | tar xz<br>
+                        sudo mv pagent /usr/local/bin/<br><br>
+                        <span class="comment"># Or build from source (requires Go 1.21+)</span><br>
+                        git clone https://github.com/tuannvm/pagent && cd pagent && make install
                     </div>
                 </div>
                 <div class="install-step">

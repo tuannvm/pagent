@@ -30,8 +30,12 @@ flowchart LR
 ## Quick Start
 
 ```bash
-# Install
-git clone https://github.com/tuannvm/pagent && cd pagent && make install
+# macOS (Homebrew)
+brew install tuannvm/mcp/pagent
+
+# Or download binary directly
+curl -sSL https://github.com/tuannvm/pagent/releases/latest/download/pagent_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz | tar xz
+sudo mv pagent /usr/local/bin/
 
 # Launch the interactive TUI
 pagent ui
@@ -67,17 +71,32 @@ pagent run ./prd.md --sequential -v
 ## Prerequisites
 
 - [Claude Code](https://claude.ai/claude-code) installed and authenticated
-- Go 1.21+ (for building from source)
 
 ## Installation
 
-**From releases:** Download from [GitHub Releases](https://github.com/tuannvm/pagent/releases)
-
-**From source:**
+**Homebrew (macOS/Linux):**
 ```bash
-git clone https://github.com/tuannvm/pagent
-cd pagent
-make install
+brew install tuannvm/mcp/pagent
+```
+
+**Binary download:**
+```bash
+# macOS (Apple Silicon)
+curl -sSL https://github.com/tuannvm/pagent/releases/latest/download/pagent_darwin_arm64.tar.gz | tar xz
+sudo mv pagent /usr/local/bin/
+
+# macOS (Intel)
+curl -sSL https://github.com/tuannvm/pagent/releases/latest/download/pagent_darwin_amd64.tar.gz | tar xz
+sudo mv pagent /usr/local/bin/
+
+# Linux (x86_64)
+curl -sSL https://github.com/tuannvm/pagent/releases/latest/download/pagent_linux_amd64.tar.gz | tar xz
+sudo mv pagent /usr/local/bin/
+```
+
+**From source** (requires Go 1.21+):
+```bash
+git clone https://github.com/tuannvm/pagent && cd pagent && make install
 ```
 
 ## Commands
