@@ -33,7 +33,9 @@
 
 ```
 pagent/
-├── cmd/pagent/main.go           # Entry point
+├── cmd/
+│   ├── pagent/main.go           # CLI entry point
+│   └── pagent-mcp/main.go       # MCP server entry point
 ├── internal/
 │   ├── agent/
 │   │   ├── manager.go           # Agent lifecycle
@@ -44,6 +46,10 @@ pagent/
 │   │   ├── config.go            # YAML loading
 │   │   └── options.go           # Shared RunOptions
 │   ├── input/discover.go        # Input file discovery
+│   ├── mcp/                     # MCP server package
+│   │   ├── server.go            # Server + transport methods
+│   │   ├── handlers.go          # Tool business logic
+│   │   └── types.go             # Input/output types
 │   ├── prompt/
 │   │   ├── loader.go            # Template loading
 │   │   └── templates/           # Embedded prompts
@@ -180,3 +186,69 @@ cmd/ui.go ──▶ tui.RunDashboard() ──▶ config.RunOptions ──▶ run
 - Single-screen form using [charmbracelet/huh](https://github.com/charmbracelet/huh)
 - Smart defaults from config
 - Advanced options in collapsible panel
+
+## MCP Server Architecture
+
+The MCP (Model Context Protocol) server enables integration with Claude Desktop, Claude Code, and other MCP clients.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      MCP Clients                            │
+│  (Claude Desktop, Claude Code, custom clients)              │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ MCP Protocol (JSON-RPC 2.0)
+                          │
+┌─────────────────────────▼───────────────────────────────────┐
+│                    pagent-mcp Server                        │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                  Transport Layer                     │   │
+│  │  stdio (default) │ HTTP (streamable) │ HTTP+OAuth   │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                   MCP Tools                          │   │
+│  │  run_agent │ run_pipeline │ list_agents │ get_status│   │
+│  │  send_message │ stop_agents                          │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                   Handlers                           │   │
+│  │  Reuses internal/agent, internal/config              │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Package Structure (`internal/mcp/`)
+
+| File | Purpose |
+|------|---------|
+| `server.go` | Server struct with `ServeStdio()`, `ServeHTTP()`, `ServeHTTPWithOAuth()` methods |
+| `handlers.go` | Business logic wrapping `agent.Manager` |
+| `types.go` | Input/output types with JSON schema annotations |
+
+### Transport Modes
+
+| Mode | Use Case | Protocol Version |
+|------|----------|------------------|
+| stdio | Claude Desktop, CLI piping | MCP 2025-11-25 |
+| HTTP | Web integration, microservices | Streamable HTTP |
+| HTTP+OAuth | Authenticated access | OAuth 2.1 (RFC 9728) |
+
+### Tool Annotations (MCP 2025-11-25)
+
+Tools include semantic hints for clients:
+
+```go
+&mcp.ToolAnnotations{
+    Title:           "Run Pipeline",
+    ReadOnlyHint:    false,        // Modifies state
+    DestructiveHint: boolPtr(false), // Non-destructive
+    IdempotentHint:  false,        // Not idempotent
+    OpenWorldHint:   boolPtr(true), // Interacts with external systems
+}
+```
+
+### Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `github.com/modelcontextprotocol/go-sdk` | Official MCP SDK |
+| `github.com/tuannvm/oauth-mcp-proxy` | OAuth 2.1 integration |
