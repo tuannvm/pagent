@@ -204,6 +204,98 @@ pagent init                # Create .pagent/config.yaml
 pagent agents list         # List available agents
 ```
 
+## MCP Server
+
+Pagent can run as an MCP (Model Context Protocol) server for integration with Claude Desktop, Claude Code, and other MCP-compatible clients.
+
+### Claude Desktop Integration
+
+Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "pagent": {
+      "command": "pagent",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+With custom config:
+
+```json
+{
+  "mcpServers": {
+    "pagent": {
+      "command": "pagent",
+      "args": ["mcp", "--config", "/path/to/.pagent/config.yaml"]
+    }
+  }
+}
+```
+
+### Transport Modes
+
+**Stdio (default)** - For CLI integration:
+```bash
+pagent mcp
+pagent mcp --config .pagent/config.yaml --verbose
+```
+
+**HTTP** - For web integration:
+```bash
+pagent mcp --transport http --port 8080
+```
+
+**HTTP with OAuth 2.1** - For authenticated access:
+```bash
+pagent mcp --transport http \
+  --oauth \
+  --provider okta \
+  --issuer https://company.okta.com \
+  --audience api://pagent
+```
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `run_agent` | Run a single agent (architect, qa, security, implementer, verifier) |
+| `run_pipeline` | Run the full pipeline with dependency resolution |
+| `list_agents` | List available agents and their dependencies |
+| `get_status` | Check status of running agents |
+| `send_message` | Send guidance to a running agent |
+| `stop_agents` | Stop running agents |
+
+### Example Usage
+
+From Claude Desktop or any MCP client:
+
+```text
+Use pagent to run the architect agent on /path/to/prd.md
+```
+
+The MCP server exposes all pagent functionality through structured tool calls, enabling LLMs to orchestrate the agent pipeline programmatically.
+
+### CLI Options
+
+```bash
+pagent mcp --help
+
+Options:
+  --transport string      Transport mode: stdio, http (default "stdio")
+  --port int              HTTP port (default 8080)
+  --oauth                 Enable OAuth 2.1 authentication
+  --provider string       OAuth provider: okta, google, azure, hmac (default "okta")
+  --issuer string         OAuth issuer URL (required with --oauth)
+  --audience string       OAuth audience (required with --oauth)
+  --session-timeout       HTTP session timeout (default 30m)
+  --config string         Path to pagent config file
+  -v, --verbose           Enable verbose logging
+```
+
 ## Workflows
 
 ### Quick Specs Review

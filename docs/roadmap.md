@@ -9,6 +9,17 @@
 | LLM Support | Claude Code only (AgentAPI) |
 | Config | Full-featured, complex |
 | Interface | CLI + TUI dashboard |
+| MCP Server | Stdio + HTTP + OAuth 2.1 |
+
+### Recently Shipped: MCP Server
+
+Pagent now runs as an MCP (Model Context Protocol) server:
+
+- **Stdio transport** - Claude Desktop integration
+- **Streamable HTTP** - Web integration (MCP 2025-11-25 spec)
+- **OAuth 2.1** - Authenticated access via `oauth-mcp-proxy`
+- **Tool annotations** - Semantic hints for MCP clients
+- **6 tools** - run_agent, run_pipeline, list_agents, get_status, send_message, stop_agents
 
 ## v1.x (Next)
 

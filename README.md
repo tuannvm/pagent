@@ -100,6 +100,7 @@ git clone https://github.com/tuannvm/pagent && cd pagent && make install
 | `pagent message <agent> "msg"` | Send guidance |
 | `pagent stop [--all]` | Stop agents |
 | `pagent init` | Create config file |
+| `pagent mcp` | Run as MCP server |
 
 ### Common Options
 
@@ -131,6 +132,38 @@ Run `pagent init` to create `.pagent/config.yaml`. Key options:
 
 See [docs/tutorial.md](docs/tutorial.md#configuration) for full config reference.
 
+## MCP Server
+
+Pagent can run as an [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server, enabling integration with Claude Desktop, Claude Code, and other MCP clients.
+
+```bash
+# Stdio transport (default) - for Claude Desktop
+pagent mcp
+
+# HTTP transport - for web integration
+pagent mcp --transport http --port 8080
+
+# HTTP with OAuth 2.1 authentication
+pagent mcp --transport http --oauth --issuer https://company.okta.com --audience api://pagent
+```
+
+**Available MCP Tools:**
+
+| Tool | Description |
+|------|-------------|
+| `run_agent` | Run a single agent on a PRD |
+| `run_pipeline` | Run the full agent pipeline |
+| `list_agents` | List available agents |
+| `get_status` | Check running agent status |
+| `send_message` | Send guidance to a running agent |
+| `stop_agents` | Stop running agents |
+
+See [docs/tutorial.md](docs/tutorial.md#mcp-server) for setup instructions.
+
+## Claude Code Skill
+
+This repo includes a Claude Code skill (`.claude/skills/pagent/SKILL.md`) that teaches Claude how to use pagent. When you open this project in Claude Code, it automatically knows pagent commands and workflows.
+
 ## Documentation
 
 | Doc | Content |
@@ -158,6 +191,9 @@ Currently supports **Claude Code** only. Coming next:
 - **Multi-LLM support** - Gemini, Codex, AMP
 - **Simplified config** - Fewer options, smarter defaults
 - **Better UX** - Guided setup, clearer outputs
+
+Recently shipped:
+- **MCP Server** - Integrate with Claude Desktop and MCP clients
 
 See [full roadmap](docs/roadmap.md).
 
