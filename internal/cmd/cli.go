@@ -47,6 +47,8 @@ func Execute() error {
 		return stopMain(os.Args[2:])
 	case "agents":
 		return agentsMain(os.Args[2:])
+	case "mcp":
+		return mcpMain(os.Args[2:])
 	case "version", "-v", "--version":
 		fmt.Printf("pagent version %s\n", version)
 		return nil
@@ -75,6 +77,7 @@ Commands:
   message <agent>   Send a message to an agent
   stop [agent]      Stop running agents
   agents            Manage agent definitions
+  mcp               Run as MCP server
   version           Print version information
   help              Show this help
 
@@ -85,6 +88,7 @@ Examples:
   pagent run ./prd.md -a architect,qa -s
   pagent init
   pagent status
+  pagent mcp --transport http --port 8080
 
 Run 'pagent <command> -h' for command-specific help.
 `)

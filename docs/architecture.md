@@ -33,9 +33,7 @@
 
 ```
 pagent/
-├── cmd/
-│   ├── pagent/main.go           # CLI entry point
-│   └── pagent-mcp/main.go       # MCP server entry point
+├── cmd/pagent/main.go           # CLI entry point (includes mcp subcommand)
 ├── internal/
 │   ├── agent/
 │   │   ├── manager.go           # Agent lifecycle
@@ -46,6 +44,7 @@ pagent/
 │   │   ├── config.go            # YAML loading
 │   │   └── options.go           # Shared RunOptions
 │   ├── input/discover.go        # Input file discovery
+│   ├── cmd/mcp.go               # MCP subcommand
 │   ├── mcp/                     # MCP server package
 │   │   ├── server.go            # Server + transport methods
 │   │   ├── handlers.go          # Tool business logic
@@ -199,7 +198,7 @@ The MCP (Model Context Protocol) server enables integration with Claude Desktop,
                           │ MCP Protocol (JSON-RPC 2.0)
                           │
 ┌─────────────────────────▼───────────────────────────────────┐
-│                    pagent-mcp Server                        │
+│                    pagent mcp Server                        │
 │  ┌─────────────────────────────────────────────────────┐   │
 │  │                  Transport Layer                     │   │
 │  │  stdio (default) │ HTTP (streamable) │ HTTP+OAuth   │   │

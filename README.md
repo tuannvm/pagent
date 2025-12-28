@@ -100,7 +100,7 @@ git clone https://github.com/tuannvm/pagent && cd pagent && make install
 | `pagent message <agent> "msg"` | Send guidance |
 | `pagent stop [--all]` | Stop agents |
 | `pagent init` | Create config file |
-| `pagent-mcp` | Run as MCP server |
+| `pagent mcp` | Run as MCP server |
 
 ### Common Options
 
@@ -138,13 +138,13 @@ Pagent can run as an [MCP (Model Context Protocol)](https://modelcontextprotocol
 
 ```bash
 # Stdio transport (default) - for Claude Desktop
-pagent-mcp
+pagent mcp
 
 # HTTP transport - for web integration
-pagent-mcp --transport http --port 8080
+pagent mcp --transport http --port 8080
 
 # HTTP with OAuth 2.1 authentication
-pagent-mcp --transport http --port 8080 --oauth --issuer https://company.okta.com --audience api://pagent
+pagent mcp --transport http --oauth --issuer https://company.okta.com --audience api://pagent
 ```
 
 **Available MCP Tools:**

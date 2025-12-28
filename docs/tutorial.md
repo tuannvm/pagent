@@ -208,14 +208,6 @@ pagent agents list         # List available agents
 
 Pagent can run as an MCP (Model Context Protocol) server for integration with Claude Desktop, Claude Code, and other MCP-compatible clients.
 
-### Installation
-
-The MCP server binary is included with pagent:
-
-```bash
-brew install tuannvm/mcp/pagent  # Installs both pagent and pagent-mcp
-```
-
 ### Claude Desktop Integration
 
 Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
@@ -224,8 +216,21 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 {
   "mcpServers": {
     "pagent": {
-      "command": "pagent-mcp",
-      "args": ["--config", "/path/to/.pagent/config.yaml"]
+      "command": "pagent",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+With custom config:
+
+```json
+{
+  "mcpServers": {
+    "pagent": {
+      "command": "pagent",
+      "args": ["mcp", "--config", "/path/to/.pagent/config.yaml"]
     }
   }
 }
@@ -235,18 +240,18 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 
 **Stdio (default)** - For CLI integration:
 ```bash
-pagent-mcp
-pagent-mcp --config .pagent/config.yaml --verbose
+pagent mcp
+pagent mcp --config .pagent/config.yaml --verbose
 ```
 
 **HTTP** - For web integration:
 ```bash
-pagent-mcp --transport http --port 8080
+pagent mcp --transport http --port 8080
 ```
 
 **HTTP with OAuth 2.1** - For authenticated access:
 ```bash
-pagent-mcp --transport http --port 8080 \
+pagent mcp --transport http \
   --oauth \
   --provider okta \
   --issuer https://company.okta.com \
@@ -277,7 +282,7 @@ The MCP server exposes all pagent functionality through structured tool calls, e
 ### CLI Options
 
 ```bash
-pagent-mcp --help
+pagent mcp --help
 
 Options:
   --transport string      Transport mode: stdio, http (default "stdio")
@@ -288,7 +293,7 @@ Options:
   --audience string       OAuth audience (required with --oauth)
   --session-timeout       HTTP session timeout (default 30m)
   --config string         Path to pagent config file
-  --verbose               Enable verbose logging
+  -v, --verbose           Enable verbose logging
 ```
 
 ## Workflows
