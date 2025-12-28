@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -222,7 +223,7 @@ func (h *Handlers) RunPipeline(ctx context.Context, input RunPipelineInput) (Run
 func (h *Handlers) ListAgents(_ context.Context, _ ListAgentsInput) ListAgentsOutput {
 	cfg := h.loadConfig()
 
-	var agents []AgentInfo
+	agents := make([]AgentInfo, 0) // Initialize as empty slice, not nil
 	for name, agentCfg := range cfg.Agents {
 		agents = append(agents, AgentInfo{
 			Name:        name,
@@ -242,7 +243,7 @@ func (h *Handlers) GetStatus(_ context.Context, input GetStatusInput) GetStatusO
 		return GetStatusOutput{Agents: []AgentStatus{}}
 	}
 
-	var agents []AgentStatus
+	agents := make([]AgentStatus, 0) // Initialize as empty slice, not nil
 	for name, port := range state {
 		if input.AgentName != "" && name != input.AgentName {
 			continue
@@ -306,18 +307,101 @@ func (h *Handlers) StopAgents(_ context.Context, input StopAgentsInput) StopAgen
 		return StopAgentsOutput{Stopped: []string{}, Success: true}
 	}
 
-	var stopped []string
+	stopped := make([]string, 0) // Initialize as empty slice, not nil
+	var errors []string
+
 	if input.AgentName != "" {
-		if _, ok := state[input.AgentName]; ok {
+		// Stop specific agent
+		port, ok := state[input.AgentName]
+		if !ok {
+			return StopAgentsOutput{
+				Stopped: []string{},
+				Success: false,
+				Error:   fmt.Sprintf("agent %q not found in running agents", input.AgentName),
+			}
+		}
+
+		if err := stopAgentByPort(input.AgentName, port); err != nil {
+			errors = append(errors, err.Error())
+			// Don't remove from state if kill failed - process may still be running
+		} else {
 			stopped = append(stopped, input.AgentName)
+			// Only remove from state after successful termination
+			if err := agent.RemoveAgentFromState(input.AgentName); err != nil {
+				errors = append(errors, fmt.Sprintf("failed to update state: %v", err))
+			}
 		}
 	} else {
-		for name := range state {
-			stopped = append(stopped, name)
+		// Stop all agents
+		for name, port := range state {
+			if err := stopAgentByPort(name, port); err != nil {
+				errors = append(errors, err.Error())
+				// Don't remove failed agents from state
+			} else {
+				stopped = append(stopped, name)
+				// Remove successfully stopped agents from state individually
+				if err := agent.RemoveAgentFromState(name); err != nil {
+					errors = append(errors, fmt.Sprintf("failed to update state for %s: %v", name, err))
+				}
+			}
 		}
 	}
 
-	agent.ClearState()
+	output := StopAgentsOutput{
+		Stopped: stopped,
+		Success: len(errors) == 0,
+	}
+	if len(errors) > 0 {
+		output.Error = strings.Join(errors, "; ")
+	}
 
-	return StopAgentsOutput{Stopped: stopped, Success: true}
+	return output
+}
+
+// stopAgentByPort terminates processes listening on the specified port.
+func stopAgentByPort(name string, port int) error {
+	// Check if lsof is available
+	lsofPath, err := exec.LookPath("lsof")
+	if err != nil {
+		return fmt.Errorf("lsof not found: %w (required to stop agents)", err)
+	}
+
+	out, err := exec.Command(lsofPath, "-ti", fmt.Sprintf(":%d", port)).Output()
+	if err != nil {
+		// lsof returns exit code 1 when no process is found on the port
+		// This is expected if the agent already stopped
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			return nil // No process on port - agent already stopped
+		}
+		return fmt.Errorf("failed to find process on port %d: %w", port, err)
+	}
+
+	pidStr := strings.TrimSpace(string(out))
+	if pidStr == "" {
+		return nil // No process found
+	}
+
+	// Check if kill is available
+	killPath, err := exec.LookPath("kill")
+	if err != nil {
+		return fmt.Errorf("kill not found: %w (required to stop agents)", err)
+	}
+
+	var killErrors []string
+	pids := strings.Split(pidStr, "\n")
+	for _, pid := range pids {
+		pid = strings.TrimSpace(pid)
+		if pid == "" {
+			continue
+		}
+		killCmd := exec.Command(killPath, "-TERM", pid)
+		if err := killCmd.Run(); err != nil {
+			killErrors = append(killErrors, fmt.Sprintf("failed to kill PID %s: %v", pid, err))
+		}
+	}
+
+	if len(killErrors) > 0 {
+		return fmt.Errorf("errors stopping agent %s: %s", name, strings.Join(killErrors, "; "))
+	}
+	return nil
 }

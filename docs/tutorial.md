@@ -273,7 +273,7 @@ pagent mcp --transport http \
 
 From Claude Desktop or any MCP client:
 
-```
+```text
 Use pagent to run the architect agent on /path/to/prd.md
 ```
 

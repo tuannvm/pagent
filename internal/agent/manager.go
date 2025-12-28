@@ -333,6 +333,28 @@ func ClearState() {
 	_ = os.Remove(StateFile)
 }
 
+// RemoveAgentFromState removes a specific agent from the state file
+func RemoveAgentFromState(agentName string) error {
+	state, err := LoadState()
+	if err != nil {
+		return err
+	}
+
+	delete(state, agentName)
+
+	if len(state) == 0 {
+		ClearState()
+		return nil
+	}
+
+	data, err := json.Marshal(state)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(StateFile, data, 0644)
+}
+
 // LoadState loads agent state from disk
 func LoadState() (map[string]int, error) {
 	data, err := os.ReadFile(StateFile)

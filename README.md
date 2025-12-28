@@ -160,6 +160,10 @@ pagent mcp --transport http --oauth --issuer https://company.okta.com --audience
 
 See [docs/tutorial.md](docs/tutorial.md#mcp-server) for setup instructions.
 
+## Claude Code Skill
+
+This repo includes a Claude Code skill (`.claude/skills/pagent/SKILL.md`) that teaches Claude how to use pagent. When you open this project in Claude Code, it automatically knows pagent commands and workflows.
+
 ## Documentation
 
 | Doc | Content |

@@ -19,6 +19,7 @@ func mcpMain(args []string) error {
 		oauthProvider  string
 		oauthIssuer    string
 		oauthAudience  string
+		oauthServerURL string
 		sessionTimeout time.Duration
 		configPath     string
 		mcpVerbose     bool
@@ -30,6 +31,7 @@ func mcpMain(args []string) error {
 	fs.StringVar(&oauthProvider, "provider", "okta", "OAuth provider: okta, google, azure, hmac")
 	fs.StringVar(&oauthIssuer, "issuer", "", "OAuth issuer URL (required with --oauth)")
 	fs.StringVar(&oauthAudience, "audience", "", "OAuth audience (required with --oauth)")
+	fs.StringVar(&oauthServerURL, "server-url", "", "OAuth server URL for callbacks (default: http://localhost:<port>)")
 	fs.DurationVar(&sessionTimeout, "session-timeout", 30*time.Minute, "HTTP session timeout")
 	fs.StringVar(&configPath, "config", "", "path to pagent config file")
 	fs.BoolVar(&mcpVerbose, "v", false, "enable verbose logging")
@@ -84,9 +86,10 @@ Flags:
 			return fmt.Errorf("--issuer and --audience are required with --oauth")
 		}
 		cfg.OAuth = &pagentmcp.OAuthConfig{
-			Provider: oauthProvider,
-			Issuer:   oauthIssuer,
-			Audience: oauthAudience,
+			Provider:  oauthProvider,
+			Issuer:    oauthIssuer,
+			Audience:  oauthAudience,
+			ServerURL: oauthServerURL,
 		}
 	}
 

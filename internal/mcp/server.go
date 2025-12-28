@@ -58,9 +58,10 @@ type ServerConfig struct {
 
 // OAuthConfig holds OAuth-specific configuration.
 type OAuthConfig struct {
-	Provider string // okta, google, azure, hmac
-	Issuer   string
-	Audience string
+	Provider  string // okta, google, azure, hmac
+	Issuer    string
+	Audience  string
+	ServerURL string // Base URL for OAuth callbacks (e.g., https://example.com:8080)
 }
 
 // DefaultServerConfig returns a ServerConfig with sensible defaults.
@@ -161,6 +162,12 @@ func (s *Server) ServeHTTPWithOAuth() error {
 		return fmt.Errorf("OAuth configuration is required")
 	}
 
+	// Use configured ServerURL or fall back to localhost
+	serverURL := s.config.OAuth.ServerURL
+	if serverURL == "" {
+		serverURL = fmt.Sprintf("http://localhost:%d", s.config.Port)
+	}
+
 	mux := http.NewServeMux()
 
 	// Create OAuth-protected handler
@@ -168,7 +175,7 @@ func (s *Server) ServeHTTPWithOAuth() error {
 		Provider:  s.config.OAuth.Provider,
 		Issuer:    s.config.OAuth.Issuer,
 		Audience:  s.config.OAuth.Audience,
-		ServerURL: fmt.Sprintf("http://localhost:%d", s.config.Port),
+		ServerURL: serverURL,
 	}, s.mcpServer)
 	if err != nil {
 		return fmt.Errorf("failed to create OAuth server: %w", err)
@@ -179,7 +186,7 @@ func (s *Server) ServeHTTPWithOAuth() error {
 	s.addHealthCheck(mux)
 
 	addr := fmt.Sprintf(":%d", s.config.Port)
-	log.Printf("Starting pagent MCP server with OAuth on http://localhost%s/mcp", addr)
+	log.Printf("Starting pagent MCP server with OAuth on %s/mcp", serverURL)
 	log.Printf("OAuth provider: %s", s.config.OAuth.Provider)
 	log.Printf("OAuth issuer: %s", s.config.OAuth.Issuer)
 	s.oauthServer.LogStartup(false)
@@ -199,8 +206,12 @@ func (s *Server) addHealthCheck(mux *http.ServeMux) {
 // runHTTPServer runs an HTTP server with graceful shutdown.
 func (s *Server) runHTTPServer(addr string, handler http.Handler) error {
 	srv := &http.Server{
-		Addr:    addr,
-		Handler: handler,
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second, // Allow time for long MCP operations
+		IdleTimeout:       120 * time.Second,
 	}
 
 	// Graceful shutdown
