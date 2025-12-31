@@ -1,8 +1,8 @@
-# Pagent Marketplace
+# Claude Plugins
 
-**Transform Product Requirements Documents (PRDs) into working software through 5 specialized AI agents.**
+**Claude Code plugin marketplace containing plugins for AI-powered development workflows.**
 
-This is a Claude Code plugin marketplace containing the **pagent** plugin.
+This marketplace currently contains the **pagent** plugin - a tool that transforms Product Requirements Documents (PRDs) into working software through 5 specialized AI agents.
 
 ## Quick Start
 
@@ -10,14 +10,14 @@ This is a Claude Code plugin marketplace containing the **pagent** plugin.
 
 ```bash
 # Clone this repository
-git clone https://github.com/tuannvm/pagent.git
-cd pagent
+git clone https://github.com/tuannvm/claude-plugins.git
+cd claude-plugins
 
 # Add as a local marketplace
 claude plugin marketplace add $(pwd)
 
-# Install the plugin
-claude plugin install pagent@pagent
+# Install the pagent plugin
+claude plugin install pagent@claude-plugins
 ```
 
 ### Usage
@@ -49,10 +49,12 @@ Transform PRDs into architecture, test plans, security assessments, production-r
 | 3 | implementer | `code/` |
 | 4 | verifier | `verification-report.md` |
 
+**Documentation:** [Tutorial](./plugins/pagent/docs/tutorial.md) | [Architecture](./plugins/pagent/docs/architecture.md) | [Roadmap](./plugins/pagent/docs/roadmap.md)
+
 ## Marketplace Structure
 
 ```
-pagent/
+claude-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json      # Marketplace definition
 ├── plugins/
@@ -62,18 +64,11 @@ pagent/
 │       ├── commands/
 │       ├── hooks/
 │       ├── scripts/
+│       ├── docs/             # Plugin documentation
+│       ├── examples/         # PRD templates
 │       └── README.md
-├── docs/                     # Documentation
 └── README.md
 ```
-
-## Documentation
-
-| Doc | Content |
-|-----|---------|
-| [Tutorial](docs/tutorial.md) | Step-by-step usage guide |
-| [Architecture](docs/architecture.md) | Technical design and internals |
-| [Roadmap](docs/roadmap.md) | Future plans |
 
 ## Contributing
 

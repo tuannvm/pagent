@@ -42,6 +42,8 @@ Your PRD should include:
 - **Constraints** - Technical, business, or timing constraints
 - **Success criteria** - How do we know it's done?
 
+See [examples/](./examples/) for PRD templates.
+
 ## How It Works
 
 Pagent uses a **self-orchestrating pipeline**:
@@ -71,7 +73,9 @@ outputs/
 
 ## Documentation
 
-See [../../docs](../../docs) for:
-- [Tutorial](../../docs/tutorial.md) - Step-by-step usage guide
-- [Architecture](../../docs/architecture.md) - Technical design and internals
-- [Roadmap](../../docs/roadmap.md) - Future plans
+| Doc | Content |
+|-----|---------|
+| [Tutorial](./docs/tutorial.md) | Step-by-step usage guide |
+| [Architecture](./docs/architecture.md) | Technical design and internals |
+| [Roadmap](./docs/roadmap.md) | Future plans |
+| [Examples](./examples/) | PRD templates |

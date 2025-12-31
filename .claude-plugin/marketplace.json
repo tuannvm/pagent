@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "pagent",
-  "description": "Transform Product Requirements Documents (PRDs) into working software through 5 specialized AI agents",
+  "name": "claude-plugins",
+  "description": "Claude Code plugin marketplace containing plugins for AI-powered development workflows",
   "owner": {
     "name": "tuannvm"
   },
