@@ -22,47 +22,56 @@ check_exit_condition() {
     local WORK_DIR="$2"
     local TRANSCRIPT_PATH="$3"
 
-    local TYPE=$(echo "$CONDITION" | jq -r 'keys[0] // empty')
+    local TYPE
+    TYPE=$(echo "$CONDITION" | jq -r 'keys[0] // empty')
 
     case "$TYPE" in
         file_exists)
-            local FILE=$(echo "$CONDITION" | jq -r '.file_exists')
-            local MIN_LINES=$(echo "$CONDITION" | jq -r '.min_lines // 0')
+            local FILE
+            local MIN_LINES
+            FILE=$(echo "$CONDITION" | jq -r '.file_exists')
+            MIN_LINES=$(echo "$CONDITION" | jq -r '.min_lines // 0')
             local FILE_PATH="$WORK_DIR/$FILE"
 
             [[ -f "$FILE_PATH" ]] || return 1
 
             if [[ "$MIN_LINES" -gt 0 ]]; then
-                local LINES=$(wc -l < "$FILE_PATH" 2>/dev/null || echo "0")
+                local LINES
+                LINES=$(wc -l < "$FILE_PATH" 2>/dev/null || echo "0")
                 [[ "$LINES" -ge "$MIN_LINES" ]] || return 1
             fi
             return 0
             ;;
 
         directory_exists)
-            local DIR=$(echo "$CONDITION" | jq -r '.directory_exists')
-            local MIN_FILES=$(echo "$CONDITION" | jq -r '.min_files // 0')
+            local DIR
+            local MIN_FILES
+            DIR=$(echo "$CONDITION" | jq -r '.directory_exists')
+            MIN_FILES=$(echo "$CONDITION" | jq -r '.min_files // 0')
             local DIR_PATH="$WORK_DIR/$DIR"
 
             [[ -d "$DIR_PATH" ]] || return 1
 
             if [[ "$MIN_FILES" -gt 0 ]]; then
-                local FILE_COUNT=$(find "$DIR_PATH" -type f 2>/dev/null | wc -l || echo "0")
+                local FILE_COUNT
+                FILE_COUNT=$(find "$DIR_PATH" -type f 2>/dev/null | wc -l || echo "0")
                 [[ "$FILE_COUNT" -ge "$MIN_FILES" ]] || return 1
             fi
             return 0
             ;;
 
         promise_in_output)
-            local PROMISE=$(echo "$CONDITION" | jq -r '.promise_in_output')
-            if [[ -f "$TRANSCRIPT_PATH" ]] && grep -q "<promise>$PROMISE</promise>" "$TRANSCRIPT_PATH" 2>/dev/null; then
+            local PROMISE
+            PROMISE=$(echo "$CONDITION" | jq -r '.promise_in_output')
+            if [[ -f "$TRANSCRIPT_PATH" ]] && grep -qF "<promise>$PROMISE</promise>" "$TRANSCRIPT_PATH" 2>/dev/null; then
                 return 0
             fi
             return 1
             ;;
 
         all_files_exist)
-            local FILES=$(echo "$CONDITION" | jq -r '.all_files_exist[]')
+            local FILES
+            FILES=$(echo "$CONDITION" | jq -r '.all_files_exist[]')
             local ALL_EXIST=true
             # Use while-read for proper handling of filenames with spaces
             while IFS= read -r FILE; do
@@ -77,7 +86,8 @@ check_exit_condition() {
             ;;
 
         custom)
-            local SCRIPT=$(echo "$CONDITION" | jq -r '.custom')
+            local SCRIPT
+            SCRIPT=$(echo "$CONDITION" | jq -r '.custom')
             local SCRIPT_PATH="$WORK_DIR/$SCRIPT"
 
             # Security: validate script path is within workspace
@@ -162,8 +172,8 @@ fi
 
 # Check if max stages limit reached
 if [[ "$MAX_STAGES" -gt 0 ]]; then
-    CURRENT_STAGE_NUM=$(echo "$STAGES" | jq -r "to_entries | map(select(.value.name == \"$STAGE\"))[0].key // -1" "$PIPELINE_STATE")
-    if [[ "$CURRENT_STAGE_NUM" -ge "$MAX_STAGES" ]]; then
+    CURRENT_INDEX_CHECK=$(echo "$STAGES" | jq -r "to_entries | map(select(.value.name == \"$STAGE\"))[0].key // -1" "$PIPELINE_STATE")
+    if [[ "$CURRENT_INDEX_CHECK" -ge "$MAX_STAGES" ]]; then
         echo "🛑 Pagent: Max stages ($MAX_STAGES) reached." >&2
         jq ".stage = \"stopped_at_max\"" "$PIPELINE_STATE" > "${PIPELINE_STATE}.tmp"
         mv "${PIPELINE_STATE}.tmp" "$PIPELINE_STATE"
@@ -182,7 +192,6 @@ fi
 # Get current stage config
 STAGE_CONFIG=$(echo "$STAGES" | jq ".[$STAGE_INDEX]")
 STAGE_NAME=$(echo "$STAGE_CONFIG" | jq -r '.name')
-PROMPT=$(echo "$STAGE_CONFIG" | jq -r '.prompt // empty')
 EXIT_CONDITION=$(echo "$STAGE_CONFIG" | jq -r '.exit_when // {}')
 
 # Check exit condition
