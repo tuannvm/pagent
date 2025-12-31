@@ -1,10 +1,8 @@
 # Pagent
 
-[![Build & Verify](https://github.com/tuannvm/pagent/actions/workflows/build.yml/badge.svg)](https://github.com/tuannvm/pagent/actions/workflows/build.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/tuannvm/pagent)](https://goreportcard.com/report/github.com/tuannvm/pagent)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+**Transform Product Requirements Documents (PRDs) into working software through 5 specialized AI agents.**
 
-CLI tool that orchestrates Claude Code agents to transform PRDs into specs and working code.
+Pagent is a Claude Code plugin that orchestrates a self-driving pipeline of specialist agents to convert your PRD into architecture, test plans, security assessments, production-ready code, and verification reports.
 
 ```mermaid
 flowchart LR
@@ -29,140 +27,102 @@ flowchart LR
 
 ## Quick Start
 
-```bash
-brew install tuannvm/mcp/pagent
-pagent ui
-```
-
-The TUI guides you through selecting a PRD, persona, and running agents:
-
-```
- ██████╗  █████╗  ██████╗ ███████╗███╗   ██╗████████╗
- ██╔══██╗██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝
- ██████╔╝███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║
- ██╔═══╝ ██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║
- ██║     ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║
- ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝
-
- From idea to implementation, orchestrated.
-
- Input                       Persona
- > examples/sample-prd.md    > Balanced - Standard
-
- Output                      Action
- > ./outputs                 > ▶ Run
-
- ↑ up · ↓ down · / filter · enter select
-```
-
-Or use the CLI directly:
-
-```bash
-pagent run ./prd.md --sequential -v
-```
-
-## Prerequisites
+### Prerequisites
 
 - [Claude Code](https://claude.ai/claude-code) installed and authenticated
 
-## Installation
+### Installation
 
-**Homebrew (recommended):**
+1. **Clone this repository:**
+   ```bash
+   git clone https://github.com/tuannvm/pagent.git
+   cd pagent
+   ```
+
+2. **Install as a local Claude Code plugin:**
+   ```bash
+   claude plugin marketplace add $(pwd)
+   claude plugin install pagent@pagent-local
+   ```
+
+3. **Verify installation:**
+   ```bash
+   claude plugin list | grep pagent
+   ```
+
+### Usage
+
+Once installed, run the plugin from any Claude Code session:
+
 ```bash
-brew install tuannvm/mcp/pagent
+# Start a pipeline with your PRD
+/pagent-run ./examples/sample-prd.md
+
+# Check pipeline status
+/pagent-status
+
+# Cancel active pipeline
+/pagent-cancel
 ```
 
-<details>
-<summary>Alternative installation methods</summary>
+## How It Works
 
-**Binary download:**
-```bash
-# Detect OS and architecture automatically
-curl -sSL https://github.com/tuannvm/pagent/releases/latest/download/pagent_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz | tar xz
-sudo mv pagent /usr/local/bin/
-```
+Pagent uses a **self-orchestrating pipeline** - each agent automatically hands off to the next when complete:
 
-**From source** (requires Go 1.21+):
-```bash
-git clone https://github.com/tuannvm/pagent && cd pagent && make install
-```
+| Stage | Agent | Output | Description |
+|-------|-------|--------|-------------|
+| 1 | architect | `architecture.md` | System design, API contracts, data models |
+| 2 | qa | `test-plan.md` | Test strategy, test cases, acceptance criteria |
+| 2 | security | `security-assessment.md` | Threat model, security recommendations |
+| 3 | implementer | `code/` | Complete, production-ready codebase |
+| 4 | verifier | `verification-report.md` | Tests run, validation results |
 
-</details>
+Stages 2 (qa + security) run in parallel since they're independent.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `pagent run <prd>` | Run agents on PRD |
-| `pagent ui [prd]` | Interactive dashboard |
-| `pagent status` | Check running agents |
-| `pagent logs <agent>` | View agent output |
-| `pagent message <agent> "msg"` | Send guidance |
-| `pagent stop [--all]` | Stop agents |
-| `pagent init` | Create config file |
-| `pagent mcp` | Run as MCP server |
+| `/pagent-run <prd-file>` | Start pipeline with a PRD file |
+| `/pagent-status` | Show current stage and progress |
+| `/pagent-cancel` | Cancel the active pipeline |
 
-### Common Options
+## PRD Format
 
-```bash
-pagent run prd.md --agents architect,qa   # Run specific agents
-pagent run prd.md --sequential            # Run in dependency order
-pagent run prd.md --resume                # Skip up-to-date outputs
-pagent run prd.md --output ./docs/        # Custom output directory
-pagent run prd.md --persona minimal       # Use minimal persona
+Your PRD should include:
+
+- **Problem statement** - What are we solving?
+- **Requirements** - Functional and non-functional requirements
+- **Constraints** - Technical, business, or timing constraints
+- **Success criteria** - How do we know it's done?
+
+See [`examples/sample-prd.md`](examples/sample-prd.md) for a template.
+
+## Outputs
+
+After completion, you'll find:
+
+```
+outputs/
+├── architecture.md           # System design from architect
+├── test-plan.md              # Test strategy from qa
+├── security-assessment.md    # Security review from security
+├── code/                     # Working code from implementer
+│   ├── src/
+│   ├── tests/
+│   └── README.md
+└── verification-report.md    # Test results from verifier
 ```
 
-## Agents
+## Architecture
 
-| Agent | Output | Role |
-|-------|--------|------|
-| architect | `architecture.md` | System design, API, data models |
-| qa | `test-plan.md` | Test strategy and cases |
-| security | `security-assessment.md` | Threat model, mitigations |
-| implementer | `code/*` | Complete codebase |
-| verifier | `code/*_test.go` | Tests + verification |
+Pagent v2 is a **Claude Code plugin** - a complete rewrite from v1's Go CLI architecture. The plugin uses:
 
-## Configuration
+- **Commands** - Claude Code slash commands for user interaction
+- **Hooks** - Pipeline orchestration via stop hooks
+- **Scripts** - Pipeline setup and state management
 
-Run `pagent init` to create `.pagent/config.yaml`. Key options:
-
-- **persona**: `minimal` | `balanced` | `production`
-- **preferences**: API style, testing depth, language
-- **stack**: Cloud, database, CI/CD choices
-
-See [docs/tutorial.md](docs/tutorial.md#configuration) for full config reference.
-
-## MCP Server
-
-Pagent can run as an [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server, enabling integration with Claude Desktop, Claude Code, and other MCP clients.
-
-```bash
-# Stdio transport (default) - for Claude Desktop
-pagent mcp
-
-# HTTP transport - for web integration
-pagent mcp --transport http --port 8080
-
-# HTTP with OAuth 2.1 authentication
-pagent mcp --transport http --oauth --issuer https://company.okta.com --audience api://pagent
-```
-
-**Available MCP Tools:**
-
-| Tool | Description |
-|------|-------------|
-| `run_agent` | Run a single agent on a PRD |
-| `run_pipeline` | Run the full agent pipeline |
-| `list_agents` | List available agents |
-| `get_status` | Check running agent status |
-| `send_message` | Send guidance to a running agent |
-| `stop_agents` | Stop running agents |
-
-See [docs/tutorial.md](docs/tutorial.md#mcp-server) for setup instructions.
-
-## Claude Code Skill
-
-This repo includes a Claude Code skill (`.claude/skills/pagent/SKILL.md`) that teaches Claude how to use pagent. When you open this project in Claude Code, it automatically knows pagent commands and workflows.
+See [docs/architecture.md](docs/architecture.md) for technical details.
 
 ## Documentation
 
@@ -172,34 +132,20 @@ This repo includes a Claude Code skill (`.claude/skills/pagent/SKILL.md`) that t
 | [Architecture](docs/architecture.md) | Technical design and internals |
 | [Roadmap](docs/roadmap.md) | Future plans |
 
-## Troubleshooting
+## Development
 
-**"timeout waiting for agent"** - Check `claude --version`, increase `--timeout 600`
-
-**"port already in use"** - Run `pagent stop --all`
-
-See [docs/tutorial.md#troubleshooting](docs/tutorial.md#troubleshooting) for more.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+Pagent is open source. See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 ## Roadmap
 
 Currently supports **Claude Code** only. Coming next:
 
-- **Multi-LLM support** - Gemini, Codex, AMP
-- **Simplified config** - Fewer options, smarter defaults
-- **Better UX** - Guided setup, clearer outputs
-
-Recently shipped:
-- **MCP Server** - Integrate with Claude Desktop and MCP clients
+- **Multi-session support** - Resume pipelines across sessions
+- **Custom agent configurations** - Define your own specialist agents
+- **Integration tests** - Automated testing of the plugin itself
+- **Better error recovery** - Graceful handling of agent failures
 
 See [full roadmap](docs/roadmap.md).
-
-## Acknowledgments
-
-This project is built on [AgentAPI](https://github.com/coder/agentapi) by [Coder](https://github.com/coder) - a brilliant HTTP wrapper for Claude Code that makes agent orchestration possible. Pagent wouldn't exist without it.
 
 ## License
 

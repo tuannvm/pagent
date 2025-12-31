@@ -36,6 +36,7 @@ coverage.html
 *.tmp
 *.temp
 .pagent/
+.claude/pagent-pipeline.json
 
 # Logs
 *.log

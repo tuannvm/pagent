@@ -1,8 +1,7 @@
 {
   "name": "pagent-local",
   "owner": {
-    "name": "tuannvm",
-    "email": "tuannvm@example.com"
+    "name": "tuannvm"
   },
   "metadata": {
     "description": "Local marketplace for pagent - PRD to working software through 5 specialized AI agents",
