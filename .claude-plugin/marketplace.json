@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "pagent",
+  "description": "Transform Product Requirements Documents (PRDs) into working software through 5 specialized AI agents",
+  "owner": {
+    "name": "tuannvm"
+  },
+  "plugins": [
+    {
+      "name": "pagent",
+      "description": "Product Requirement Document (PRD) to working software through 5 specialized AI agents. Transforms PRDs into architecture, test plans, security assessments, code, and verification reports.",
+      "version": "2.0.0",
+      "author": {
+        "name": "tuannvm"
+      },
+      "source": "./plugins/pagent",
+      "category": "development"
+    }
+  ]
+}
