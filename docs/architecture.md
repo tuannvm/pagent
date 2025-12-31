@@ -2,6 +2,37 @@
 
 ## Overview
 
+### v2 (Current Design - Claude Code Plugin)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              Claude Code with Pagent Plugin              │
+│                                                         │
+│  User runs: /pagent-run prd.md                          │
+│                                                         │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Plugin Command: setup-pipeline.sh               │  │
+│  │  - Creates .claude/pagent-pipeline.json          │  │
+│  │  - Initializes 5-stage workflow                 │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                         │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Stop Hook: pipeline-orchestrator.sh             │  │
+│  │  - Reads pipeline state from .claude/            │  │
+│  │  - Checks if current stage complete             │  │
+│  │  - Blocks exit, injects next stage's prompt      │  │
+│  │  - Updates state, advances to next stage        │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                         │
+│     architect ──▶ qa ──▶ security ──▶ implementer ...   │
+│     (same session, new prompt at each handoff)          │
+└─────────────────────────────────────────────────────────┘
+```
+
+See [ADR-003](decisions/003-self-orchestrating-pipelines.md) for full details.
+
+### v1 (Legacy - Go Orchestrator)
+
 ```
 ┌─────────────────────────────────────────────────┐
 │              pagent CLI orchestrator            │
@@ -20,16 +51,49 @@
             (prd.md, outputs/*.md)
 ```
 
+*v1 is deprecated. See migration guide in ADR-003.*
+
 ## Tech Stack
 
 | Component | Choice | Rationale |
 |-----------|--------|-----------|
-| Language | Go | Single binary, fast startup, concurrency |
-| Agent Control | [AgentAPI](https://github.com/coder/agentapi) | HTTP wrapper for Claude Code |
-| Config | YAML | Human-readable |
+| Plugin Type | Claude Code Plugin | Native integration, hooks support |
+| Orchestration | Stop hooks | Self-orchestrating pipelines |
+| Commands | Slash commands | `/pagent-run`, `/pagent-status`, `/pagent-cancel` |
+| State | JSON (pagent-pipeline.json) | Declarative, easy to parse |
 | Output | Markdown | Universal, version-controllable |
 
 ## Project Structure
+
+### v2 Structure (Claude Code Plugin)
+
+```
+pagent/
+├── .claude-plugin/
+│   └── plugin.json             # Plugin metadata
+├── hooks/
+│   ├── hooks.json              # Hook registration (Stop hook)
+│   └── pipeline-orchestrator.sh # Main orchestrator logic
+├── commands/                   # Slash commands
+│   ├── pagent-run.md           # Start pipeline
+│   ├── pagent-status.md        # Show progress
+│   └── pagent-cancel.md        # Cancel pipeline
+├── scripts/
+│   └── setup-pipeline.sh       # Initialize pipeline state
+└── docs/
+```
+
+### Plugin Installation
+
+```bash
+# Install as Claude Code plugin
+claude plugin install /path/to/pagent
+
+# Or clone and symlink
+git clone https://github.com/tuannvm/pagent.git ~/.claude/plugins/pagent
+```
+
+### v1 Structure (Deprecated)
 
 ```
 pagent/
@@ -99,7 +163,59 @@ pagent/
 
 ## Key Components
 
-### AgentAPI Client (`internal/api/client.go`)
+### v2 Components (Plugin)
+
+#### Pipeline State (`.claude/pagent-pipeline.json`)
+
+The single source of truth for workflow execution:
+
+```json
+{
+  "stage": "architect",
+  "max_stages": 0,
+  "workflow_type": "prd-to-code",
+  "started_at": "2025-12-29T12:00:00Z",
+  "prd_file": "prd.md",
+  "stages": [
+    {
+      "name": "architect",
+      "prompt": "You are the architect...",
+      "exit_when": {"file_exists": "architecture.md", "min_lines": 50}
+    },
+    {
+      "name": "qa",
+      "prompt": "You are the QA engineer...",
+      "exit_when": {"file_exists": "test-plan.md", "min_lines": 30}
+    }
+  ]
+}
+```
+
+#### Stop Hook (`hooks/pipeline-orchestrator.sh`)
+
+Orchestrates stage transitions by:
+1. Reading current stage from `.claude/pagent-pipeline.json`
+2. Checking if exit condition is met
+3. Blocking exit and injecting next stage's prompt
+4. Updating state to next stage
+5. Allowing exit when pipeline complete
+
+#### Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/pagent-run prd.md` | Start pipeline |
+| `/pagent-status` | Show current stage and progress |
+| `/pagent-cancel` | Cancel active pipeline |
+
+#### Setup Script (`scripts/setup-pipeline.sh`)
+
+Called by `/pagent-run` to:
+1. Validate PRD file
+2. Generate `.claude/pagent-pipeline.json`
+3. Output initial prompt
+
+### v1 Components (Deprecated)
 
 ```go
 // Endpoints

@@ -1,64 +1,74 @@
 # Roadmap
 
-> **pagent** orchestrates multiple AI coding agents (Claude Code, Gemini CLI, Codex) to work on software projects using structured PM workflows.
+> **pagent** transforms Product Requirements into working software through self-orchestrating AI agents.
 
-## v0.x (Current)
+## v2.0 (Current Development)
 
-| Area | Status |
-|------|--------|
-| LLM Support | Claude Code only (AgentAPI) |
-| Config | Full-featured, complex |
-| Interface | CLI + TUI dashboard |
-| MCP Server | Stdio + HTTP + OAuth 2.1 |
+**Self-Orchestrating Pipelines via Claude Code Hooks**
 
-### Recently Shipped: MCP Server
+See [ADR-003](decisions/003-self-orchestrating-pipelines.md) for full details.
 
-Pagent now runs as an MCP (Model Context Protocol) server:
+### Architecture Shift
 
-- **Stdio transport** - Claude Desktop integration
-- **Streamable HTTP** - Web integration (MCP 2025-11-25 spec)
-- **OAuth 2.1** - Authenticated access via `oauth-mcp-proxy`
-- **Tool annotations** - Semantic hints for MCP clients
-- **6 tools** - run_agent, run_pipeline, list_agents, get_status, send_message, stop_agents
+| Aspect | v1 (Deprecated) | v2 (Current) |
+|--------|-----------------|--------------|
+| Orchestrator | Go code (~500 lines) | Stop hooks (~80 lines bash) |
+| Processes | 5 separate Claude Code instances | 1 instance |
+| State | Resume JSON + runtime | Single `pipeline.json` |
+| Communication | HTTP polling | Hook blocks exit |
+| API | CLI only | HTTP + SSE |
 
-## v1.x (Next)
+### Implementation Phases
 
-### P0: Multi-LLM Support
+#### Phase 1: Proof of Concept 🔄 In Progress
+- [ ] 2-stage pipeline (architect → qa)
+- [ ] Validate Stop hook handoff mechanism
+- [ ] Test with real PRDs
 
-| Provider | Backend | Status |
-|----------|---------|--------|
-| Claude Code | Claude | ✅ Supported |
-| Gemini CLI | Gemini | 🔄 In progress |
-| Codex CLI | OpenAI | 📋 Backlog |
-| AMP | Sourcegraph | 📋 Backlog |
+#### Phase 2: Full Pipeline
+- [ ] All 5 agents with hook-based orchestration
+- [ ] Validation gates (schema, checklist)
+- [ ] Revision mechanism (go back N stages on failure)
 
-**Why this matters:**
-- Per-agent LLM selection (use what works best for each task)
-- Mix LLMs in workflows (Claude for design, Codex for implementation)
-- No hard dependency on Claude Code installation
+#### Phase 3: API Server
+- [ ] `claude-code-api` HTTP server (~150 lines Go)
+- [ ] SSE streaming for real-time updates
+- [ ] Workflow type registration
 
-### P1: Simplified Configuration
+#### Phase 4: Examples & Documentation
+- [ ] Usage examples (curl, Python, Go, JS)
+- [ ] Workflow authoring guide
+- [ ] Migration guide from v1
 
-Current config requires too many decisions upfront.
+## v1.x (Legacy - Deprecated)
 
-**Changes:**
-- Reduce required fields to 3: `task`, `repo`, `llm`
-- Smart defaults that work for 80% of cases
-- Preset profiles: `--preset go-api`, `--preset python-ml`
-- Progressive disclosure for advanced options
-
-### P2: UX Polish
-
-- Fewer CLI flags (merge redundant options)
-- Actionable error messages with fix suggestions
-- Interactive setup: `pagent init`
-- Concise agent output summaries
-
-## v2.x (Future)
+The v1 Go orchestrator architecture is deprecated. Key features shipped:
 
 | Feature | Description |
 |---------|-------------|
-| Plugin system | Custom agents via Go plugins or external binaries |
-| Cost tracking | Token usage, estimated cost per run, budgets |
-| IDE extensions | VS Code, JetBrains integration |
-| Team mode | Shared configs, agent templates, audit logs |
+| **5-Agent Pipeline** | architect, qa, security, implementer, verifier |
+| **Dependency Resolution** | Topological sort, parallel execution by level |
+| **Resume State** | Content-hash based change detection |
+| **TUI Dashboard** | Interactive terminal UI |
+| **MCP Server** | Stdio + HTTP + OAuth 2.1 transport |
+
+## v2.x Future Enhancements
+
+| Priority | Feature | Description |
+|----------|---------|-------------|
+| P1 | Parallel Stages | Multi-session hooks for parallel execution |
+| P1 | Validation Framework | Pluggable validators per stage |
+| P2 | Cost Tracking | Token usage, estimated costs per run |
+| P2 | Workflow Templates | Gallery of pre-built workflows |
+| P3 | IDE Extensions | VS Code, JetBrains integration |
+| P3 | Team Mode | Shared configs, audit logs |
+
+### Multi-LLM Support (Deferred)
+
+| Provider | Backend | v2 Status |
+|----------|---------|-----------|
+| Claude Code | Claude | ✅ Primary |
+| Gemini CLI | Gemini | 📋 Future |
+| Codex CLI | OpenAI | 📋 Future |
+
+**Note:** v2 focuses on Claude Code hooks first. Multi-LLM support deferred until hooks pattern is proven.
